@@ -1,79 +1,134 @@
 import SwiftUI
 
-// Testing git push 1
 struct AIFoodView: View {
-    @StateObject var viewModel = AIViewModel()
-    @State private var inputText = ""
+    @StateObject private var vm = AIViewModel()
+    @StateObject private var voice = VoiceInputManager()
+    
+    @State private var inputText: String = ""
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                
-                
-                // MARK: - Messages Scroll
+        VStack(spacing: 0) {
+            
+            // MARK: - Chat Messages Area
+            ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.messages) { msg in
-                            MessageBubbleView(msg: msg)
+                    VStack(spacing: 0) {
+                        
+                        // All messages (user + AI)
+                        ForEach(vm.messages) { message in
+                            MessageBubbleView(message: message)
+                                .id(message.id)
                         }
-                    }
-                }
-                
-                // Floating Quick Plan Button
-                HStack {
-                    Spacer()
-
-                    GlassButton(title: nil, icon: "wand.and.stars") {
-                        viewModel.sendMessage("Make me a quick meal plan.")
-                    }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 44)   // ← PERFECT HEIGHT ABOVE SEND BAR
-                    .shadow(color: .black.opacity(0.10), radius: 12, y: 6)
-                }
-                .animation(.easeOut(duration: 0.25), value: viewModel.messages.count)
-
-
-                // MARK: - Input Bar (Perfect iMessage style)
-                HStack {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-
-                        HStack {
-                            TextField("Ask for a meal plan…", text: $inputText)
-                                .padding(.leading, 16)
-                                .padding(.vertical, 10)
-
-                            Button {
-                                if !inputText.isEmpty {
-                                    viewModel.sendMessage(inputText)
-                                    inputText = ""
-                                }
-                            } label: {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(10)
-                                    .background(AppColor.accent)
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                        
+                        // MARK: - Streaming bubble (“typing” + partial message)
+                        if vm.isStreaming {
+                            if vm.streamingText.isEmpty {
+                                // Three-dot typing bubble
+                                TypingBubbleView()
+                            } else {
+                                // Live streaming message bubble
+                                MessageBubbleView(
+                                    message: AIMsg(text: vm.streamingText, isUser: false)
+                                )
                             }
-                            .padding(.trailing, 8)
                         }
                     }
-                    .frame(height: 48)   // FIX: Proper iMessage height
+                    .padding(.top, 12)
                 }
-                .padding(.horizontal)
-                .padding(.bottom)
-
+                .background(Color(red: 0.97, green: 0.93, blue: 0.84))
+                
+                // MARK: - Auto Scroll to Bottom
+                // New iOS 17-compatible version (no parameters)
+                .onChange(of: vm.messages.count) {
+                    scrollToBottom(proxy: proxy)
+                }
+                .onChange(of: vm.streamingText) {
+                    scrollToBottom(proxy: proxy)
+                }
             }
-            .background(AppColor.background.ignoresSafeArea())
-            .navigationTitle("AI Meal Planner")
+            
+            // MARK: - Recipe Card
+            if let text = vm.latestAIText, !text.isEmpty {
+                RecipeCardView(text: text)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            // MARK: - Input Bar at bottom
+            inputBar
+                .background(
+                    Color(red: 0.97, green: 0.93, blue: 0.84)
+                        .ignoresSafeArea(edges: .bottom)
+                )
+        }
+        .onAppear {
+            Task {
+                _ = await voice.requestAuthorization()
+            }
         }
     }
-}
-
-#Preview {
-    AIFoodView()
+    
+    // MARK: - Scroll Logic
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        if let last = vm.messages.last {
+            withAnimation(.easeOut(duration: 0.25)) {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        }
+    }
+    
+    // MARK: - Input Bar (mic + textfield + send)
+    private var inputBar: some View {
+        HStack(spacing: 10) {
+            
+            // ---------- MIC BUTTON ----------
+            Button {
+                if voice.isRecording {
+                    voice.stopRecording()
+                } else {
+                    voice.startRecording { text in
+                        self.inputText = text
+                    }
+                }
+            } label: {
+                Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 26))
+                    .foregroundColor(voice.isRecording ? .red : .orange)
+            }
+            
+            // ---------- TEXT FIELD ----------
+            ZStack(alignment: .leading) {
+                if inputText.isEmpty {
+                    Text("Ask for a meal plan…")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 14)
+                }
+                
+                TextField("", text: $inputText, axis: .vertical)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
+            
+            // ---------- SEND BUTTON ----------
+            Button {
+                let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                
+                vm.sendMessage(text)
+                inputText = ""
+            } label: {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(.white)
+                    .padding(10)
+                    .background(Color.orange)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
 }
