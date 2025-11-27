@@ -6,59 +6,93 @@ struct AIFoodView: View {
     
     @State private var inputText: String = ""
     
+    // 👇 Constant ID for the bottom anchor inside the ScrollView
+    private let bottomID = "ChatBottomAnchor"
+    
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            // Full-screen app background
+            AppColor.background
+                .ignoresSafeArea()
             
-            // MARK: - Chat Messages Area
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        
-                        // All messages (user + AI)
-                        ForEach(vm.messages) { message in
-                            MessageBubbleView(message: message)
-                                .id(message.id)
-                        }
-                        
-                        // MARK: - Streaming bubble (“typing” + partial message)
-                        if vm.isStreaming {
-                            if vm.streamingText.isEmpty {
-                                // Three-dot typing bubble
-                                TypingBubbleView()
-                            } else {
-                                // Live streaming message bubble
-                                MessageBubbleView(
-                                    message: AIMsg(text: vm.streamingText, isUser: false)
-                                )
+            VStack(spacing: 0) {
+                // MARK: - Chat Messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            
+                            // MARK: - Quick sample prompts (only when chat is empty)
+                            if vm.messages.isEmpty && !vm.isStreaming {
+                                VStack(spacing: 12) {
+                                    quickPromptBubble(
+                                        "Create meal plan for 2lbs chicken with rice"
+                                    )
+                                    quickPromptBubble(
+                                        "Make me a quick meal plan."
+                                    )
+                                }
+                                .padding(.top, 48)
+                                .padding(.horizontal, 32)
                             }
+                            
+                            // MARK: - Conversation bubbles
+                            ForEach(vm.messages) { message in
+                                MessageBubbleView(message: message)
+                                    .id(message.id)
+                            }
+                            
+                            // MARK: - Streaming bubble (“typing” / live text)
+                            if vm.isStreaming {
+                                if vm.streamingText.isEmpty {
+                                    TypingBubbleView()
+                                } else {
+                                    MessageBubbleView(
+                                        message: AIMsg(
+                                            text: vm.streamingText,
+                                            isUser: false
+                                        )
+                                    )
+                                }
+                            }
+                            
+                            // 👇 Invisible anchor at the very bottom of the chat
+                            Color.clear
+                                .frame(height: 1)
+                                .id(bottomID)
                         }
+                        .padding(.top, 12)
                     }
-                    .padding(.top, 12)
+                    .scrollIndicators(.hidden)
+                    .scrollDismissesKeyboard(.interactively)
+                    // Auto-scroll when a new message is added
+                    .onChange(of: vm.messages.count) {
+                        scrollToBottom(proxy: proxy)
+                    }
+                    // Auto-scroll as streaming text grows
+                    .onChange(of: vm.streamingText) {
+                        scrollToBottom(proxy: proxy)
+                    }
+                    .onAppear {
+                        scrollToBottom(proxy: proxy)
+                    }
                 }
-                .background(Color(red: 0.97, green: 0.93, blue: 0.84))
                 
-                // MARK: - Auto Scroll to Bottom
-                // New iOS 17-compatible version (no parameters)
-                .onChange(of: vm.messages.count) {
-                    scrollToBottom(proxy: proxy)
+                // MARK: - Magic button + Input bar
+                VStack(spacing: 8) {
+                    HStack {
+                        Spacer()
+                        magicAIButton
+                    }
+                    
+                    inputBar
                 }
-                .onChange(of: vm.streamingText) {
-                    scrollToBottom(proxy: proxy)
-                }
-            }
-            
-            // MARK: - Recipe Card
-            if let text = vm.latestAIText, !text.isEmpty {
-                RecipeCardView(text: text)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            
-            // MARK: - Input Bar at bottom
-            inputBar
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
                 .background(
-                    Color(red: 0.97, green: 0.93, blue: 0.84)
+                    AppColor.background
                         .ignoresSafeArea(edges: .bottom)
                 )
+            }
         }
         .onAppear {
             Task {
@@ -67,20 +101,57 @@ struct AIFoodView: View {
         }
     }
     
-    // MARK: - Scroll Logic
+    // MARK: - Auto scroll
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        if let last = vm.messages.last {
-            withAnimation(.easeOut(duration: 0.25)) {
-                proxy.scrollTo(last.id, anchor: .bottom)
+        // Defer to next run loop so layout has updated
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(bottomID, anchor: .bottom)
             }
         }
     }
     
-    // MARK: - Input Bar (mic + textfield + send)
+    // MARK: - Quick prompt bubble (orange user-style sample)
+    private func quickPromptBubble(_ text: String) -> some View {
+        Button {
+            vm.sendMessage(text)
+        } label: {
+            HStack {
+                Text(text)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(14)
+            .background(AppColor.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
+        }
+    }
+    
+    // MARK: - Magic AI Meals button
+    private var magicAIButton: some View {
+        Button {
+            vm.sendMessage("Make me a quick balanced meal plan for today.")
+        } label: {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(AppColor.accent)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.15),
+                                radius: 6, x: 0, y: 3)
+                )
+        }
+        .accessibilityLabel("Magic AI meal suggestion")
+    }
+    
+    // MARK: - Input bar (mic + textfield + send)
     private var inputBar: some View {
         HStack(spacing: 10) {
-            
-            // ---------- MIC BUTTON ----------
+            // Mic
             Button {
                 if voice.isRecording {
                     voice.stopRecording()
@@ -92,10 +163,10 @@ struct AIFoodView: View {
             } label: {
                 Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                     .font(.system(size: 26))
-                    .foregroundColor(voice.isRecording ? .red : .orange)
+                    .foregroundColor(voice.isRecording ? .red : AppColor.accent)
             }
             
-            // ---------- TEXT FIELD ----------
+            // TextField
             ZStack(alignment: .leading) {
                 if inputText.isEmpty {
                     Text("Ask for a meal plan…")
@@ -111,11 +182,10 @@ struct AIFoodView: View {
             .background(.ultraThinMaterial)
             .clipShape(Capsule())
             
-            // ---------- SEND BUTTON ----------
+            // Send
             Button {
                 let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { return }
-                
                 vm.sendMessage(text)
                 inputText = ""
             } label: {
@@ -123,12 +193,10 @@ struct AIFoodView: View {
                     .font(.system(size: 22))
                     .foregroundColor(.white)
                     .padding(10)
-                    .background(Color.orange)
+                    .background(AppColor.accent)
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 }

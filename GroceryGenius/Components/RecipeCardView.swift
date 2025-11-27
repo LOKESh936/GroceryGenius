@@ -5,7 +5,9 @@ struct RecipeCardView: View {
     
     private var title: String {
         if let firstLine = text.split(separator: "\n").first {
-            return String(firstLine).replacingOccurrences(of: "#", with: "").trimmingCharacters(in: .whitespaces)
+            return String(firstLine)
+                .replacingOccurrences(of: "#", with: "")
+                .trimmingCharacters(in: .whitespaces)
         }
         return "AI Meal Plan"
     }
@@ -28,10 +30,7 @@ struct RecipeCardView: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [
-                    Color(red: 0.27, green: 0.46, blue: 0.23),
-                    Color(red: 0.2, green: 0.35, blue: 0.18)
-                ],
+                colors: [AppColor.primary, AppColor.secondary],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

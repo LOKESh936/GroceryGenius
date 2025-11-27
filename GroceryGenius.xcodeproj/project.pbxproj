@@ -11,9 +11,22 @@
 		E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryGenius.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E6CBDDC82ED5820D0046B40D /* Exceptions for "GroceryGenius" folder in "GroceryGenius" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E6CBE1AE2ED03CCC00F2B4E6 /* GroceryGenius */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E6CBE1B12ED03CCC00F2B4E6 /* GroceryGenius */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E6CBDDC82ED5820D0046B40D /* Exceptions for "GroceryGenius" folder in "GroceryGenius" target */,
+			);
 			path = GroceryGenius;
 			sourceTree = "<group>";
 		};
@@ -263,6 +276,9 @@
 				DEVELOPMENT_TEAM = 3HCML9QK3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GroceryGenius/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -292,6 +308,9 @@
 				DEVELOPMENT_TEAM = 3HCML9QK3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GroceryGenius/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
