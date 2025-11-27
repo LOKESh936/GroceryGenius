@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E663FC6A2ED7FDBB006BB68F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E663FC692ED7FDBB006BB68F /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		E663FC692ED7FDBB006BB68F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryGenius.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -46,6 +51,7 @@
 		E6CBE1A62ED03CCC00F2B4E6 = {
 			isa = PBXGroup;
 			children = (
+				E663FC692ED7FDBB006BB68F /* README.md */,
 				E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */,
 				E6CBE1B12ED03CCC00F2B4E6 /* GroceryGenius */,
 				E6CBE1B02ED03CCC00F2B4E6 /* Products */,
@@ -124,6 +130,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E663FC6A2ED7FDBB006BB68F /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
