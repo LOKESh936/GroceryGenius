@@ -1,8 +1,7 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Streaming models
-
+// MARK: - Streaming chunk model (for SSE)
 private struct ChatStreamChunk: Decodable {
     struct Choice: Decodable {
         struct Delta: Decodable {
@@ -14,121 +13,154 @@ private struct ChatStreamChunk: Decodable {
 }
 
 @MainActor
-class AIViewModel: ObservableObject {
+final class AIViewModel: ObservableObject {
     @Published var messages: [AIMsg] = []
+
+    // Streaming state
     @Published var isStreaming: Bool = false
     @Published var streamingText: String = ""
 
-    // Keep a handle to the current streaming task so we can cancel it (Stop button)
+    // For "Regenerate" feature later
+    private var lastUserPrompt: String?
     private var currentTask: Task<Void, Never>?
 
-    // Last AI message in the history
-    var latestAIMessage: AIMsg? {
-        messages.last(where: { !$0.isUser })
-    }
-
-    // Text used by the recipe card
+    // Last AI message text (used if we ever want recipe cards again)
     var latestAIText: String? {
-        latestAIMessage?.text
+        messages.last(where: { !$0.isUser })?.text
     }
 
-    // Last user prompt (for Regenerate)
-    var lastUserPrompt: String? {
-        messages.last(where: { $0.isUser })?.text
-    }
+    // MARK: - Public API
 
-    // MARK: - Public actions
-
-    func sendMessage(_ text: String) {
+    /// Main entry point for sending a message.
+    /// `groceries` is the current list of items from the Grocery tab.
+    func sendMessage(_ text: String, groceries: [GroceryItem] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        // Save user message into chat history
         let userMessage = AIMsg(text: trimmed, isUser: true)
         messages.append(userMessage)
+        lastUserPrompt = trimmed
 
-        // Cancel any previous stream and start a new one
+        // Cancel any previous streaming task
         currentTask?.cancel()
+        isStreaming = true
+        streamingText = ""
+
         currentTask = Task { [weak self] in
-            await self?.streamFromOpenAI(prompt: trimmed)
+            await self?.streamFromOpenAI(prompt: trimmed, groceries: groceries)
         }
     }
 
     func stopStreaming() {
         currentTask?.cancel()
-        currentTask = nil
         isStreaming = false
+        streamingText = ""
     }
 
     func clearChat() {
         currentTask?.cancel()
-        currentTask = nil
         messages.removeAll()
         streamingText = ""
         isStreaming = false
+        lastUserPrompt = nil
     }
 
-    func regenerateLast() {
-        guard let prompt = lastUserPrompt else { return }
-        sendMessage(prompt)
+    /// Optional: regenerate last answer (keeps same conversation + groceries).
+    func regenerateLast(groceries: [GroceryItem] = []) {
+        guard let lastPrompt = lastUserPrompt else { return }
+        sendMessage(lastPrompt, groceries: groceries)
     }
 
-    // MARK: - Streaming Chat Completions
+    // MARK: - OpenAI Streaming
 
-    private func streamFromOpenAI(prompt: String) async {
+    private func streamFromOpenAI(prompt: String, groceries: [GroceryItem]) async {
         guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String,
-              !apiKey.isEmpty
-        else {
+              !apiKey.isEmpty else {
             print("❌ Missing OPENAI_API_KEY in Info.plist")
+            isStreaming = false
             return
         }
 
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
 
+        // ---- Build grocery context -------------------------------------------------
+        let groceryContext: String
+        if groceries.isEmpty {
+            groceryContext = """
+            The user has not provided a grocery list. Suggest realistic, budget-friendly meals \
+            that use ingredients commonly available in a student kitchen.
+            """
+        } else {
+            let itemsText = groceries.map { item in
+                if item.quantity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return item.name
+                } else {
+                    return "\(item.quantity) × \(item.name)"
+                }
+            }
+            .joined(separator: ", ")
+
+            groceryContext = """
+            Here is the user's current grocery inventory (name and optional quantity):
+
+            \(itemsText)
+
+            Always prefer using these items first. Only add extra ingredients when necessary.
+            """
+        }
+
+        // ---- System prompt: style + formatting rules ------------------------------
+        let systemContent = """
+        You are **GroceryGenius**, a friendly AI nutrition assistant.
+
+        Goals:
+        - Create practical meal plans and recipes suitable for a busy student.
+        - Prefer using the user's existing groceries.
+        - Keep the tone warm, encouraging, and concise.
+
+        Formatting rules (VERY IMPORTANT):
+        - Respond in **Markdown**.
+        - Use clear headings, for example:
+          - `## Day 1`, `## Day 2`
+          - `### Breakfast`, `### Lunch`, `### Snack`, `### Dinner`
+        - Use bullet lists for ingredients and steps:
+          - `- Ingredient`
+          - `- Step`
+        - Put each bullet on its **own line**.
+        - Avoid long wall-of-text paragraphs. Break content into short sections.
+        - Highlight important words with **bold** occasionally (not too much).
+
+        \(groceryContext)
+        """
+
+        // Take the last few turns of the conversation for context
+        let historyMessages: [[String: String]] = messages.suffix(8).map { msg in
+            [
+                "role": msg.isUser ? "user" : "assistant",
+                "content": msg.text
+            ]
+        }
+
+        var chatMessages: [[String: String]] = [
+            ["role": "system", "content": systemContent]
+        ]
+        chatMessages.append(contentsOf: historyMessages)
+        chatMessages.append([
+            "role": "user",
+            "content": prompt
+        ])
+
         let body: [String: Any] = [
             "model": "gpt-4.1-mini",
             "stream": true,
-            "messages": [
-                        [
-                            "role": "system",
-                            "content": """
-                            You are **GroceryGenius**, an AI nutrition coach that creates friendly, \
-                            practical meal plans.
-
-                            FORMAT RULES (very important):
-                            - Always answer in clean, readable **Markdown** (for a mobile chat UI).
-                            - Start with a short title, e.g. `## 1-Day Balanced Meal Plan`.
-                            - For each day use a heading: `### Day 1`, `### Day 2`, etc.
-                            - Inside each day, use bold meal labels and bullet lists, like:
-
-                              **Breakfast**
-                              - Item 1
-                              - Item 2
-
-                              **Lunch**
-                              - Item 1
-                              - Item 2
-
-                            - Put a blank line between headings, paragraphs, and bullet sections.
-                            - Keep sentences short. Avoid giant paragraphs.
-                            - At the end, add a small tips section, e.g.:
-
-                              **Tips**
-                              - Tip 1
-                              - Tip 2
-
-                            - Do NOT use code blocks, tables, or numbered lists unless the user asks.
-                            - Stay friendly, concise, and practical.
-                            """
-                    ],
-                    [
-                    "role": "user",
-                    "content": prompt
-                ]
-            ]
+            "temperature": 0.6,
+            "messages": chatMessages
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
             print("❌ Failed to encode JSON body")
+            isStreaming = false
             return
         }
 
@@ -138,8 +170,8 @@ class AIViewModel: ObservableObject {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        isStreaming = true
         streamingText = ""
+        isStreaming = true
 
         do {
             let (bytes, _) = try await URLSession.shared.bytes(for: request)
@@ -147,7 +179,7 @@ class AIViewModel: ObservableObject {
             for try await line in bytes.lines {
                 if Task.isCancelled { break }
 
-                // Server-Sent Events format: lines starting with "data: "
+                // OpenAI streaming lines look like: "data: {json}"
                 guard line.hasPrefix("data: ") else { continue }
                 let payload = String(line.dropFirst(6))
 
@@ -161,13 +193,18 @@ class AIViewModel: ObservableObject {
                    let delta = chunk.choices.first?.delta.content,
                    !delta.isEmpty {
                     streamingText.append(delta)
+                } else {
+                    // If this was an error payload, just print it for debugging
+                    if let json = try? JSONSerialization.jsonObject(with: data) {
+                        print("🌐 RAW RESPONSE CHUNK:", json)
+                    }
                 }
             }
 
             let finalText = streamingText.trimmingCharacters(in: .whitespacesAndNewlines)
             if !finalText.isEmpty {
-                let aiMsg = AIMsg(text: finalText, isUser: false)
-                messages.append(aiMsg)
+                let aiMessage = AIMsg(text: finalText, isUser: false)
+                messages.append(aiMessage)
             }
         } catch {
             if !Task.isCancelled {
@@ -177,6 +214,5 @@ class AIViewModel: ObservableObject {
 
         streamingText = ""
         isStreaming = false
-        currentTask = nil
     }
 }

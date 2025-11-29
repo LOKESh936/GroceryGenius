@@ -1,17 +1,14 @@
-//
-//  GroceryGeniusApp.swift
-//  GroceryGenius
-//
-//  Created by Lokeshwar Reddy Malli reddy on 11/21/25.
-//
-
 import SwiftUI
 
 @main
 struct GroceryGeniusApp: App {
+    // Shared grocery list for the whole app
+    @StateObject private var groceryViewModel = GroceryViewModel()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(groceryViewModel) // inject into all child views
         }
     }
 }
