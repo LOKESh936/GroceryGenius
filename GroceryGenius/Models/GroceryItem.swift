@@ -1,12 +1,11 @@
 import Foundation
 
-struct GroceryItem: Identifiable, Codable {
+struct GroceryItem: Identifiable, Codable, Hashable {
     let id: UUID
     var name: String
     var quantity: String
     var isCompleted: Bool
 
-    // Custom init so old call sites still work
     init(
         id: UUID = UUID(),
         name: String,
@@ -19,4 +18,3 @@ struct GroceryItem: Identifiable, Codable {
         self.isCompleted = isCompleted
     }
 }
-
