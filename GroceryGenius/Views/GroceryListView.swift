@@ -9,6 +9,7 @@ struct GroceryListView: View {
 
     // For editing via sheet
     @State private var editingItem: GroceryItem?
+    @State private var showClearConfirmation = false
 
     var body: some View {
         ZStack {
@@ -105,12 +106,36 @@ struct GroceryListView: View {
         }
         .navigationTitle("Grocery List")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showClearConfirmation = true
+                } label: {
+                    Label("Clear All", systemImage: "trash"
+                    )
+                }
+                .tint(.red)
+            }
+        }
         .sheet(item: $editingItem) { item in
             EditGrocerySheet(item: item) { newName, newQuantity in
                 viewModel.update(itemID: item.id,
                                  name: newName,
                                  quantity: newQuantity)
             }
+        }
+        .confirmationDialog(
+            "Clear all items?",
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear All", role: .destructive) {
+                // TODO: Implement clearAll() in GroceryViewModel to remove all items.
+                viewModel.clearAll()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will remove all items from the list.")
         }
     }
 }

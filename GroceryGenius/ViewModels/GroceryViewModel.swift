@@ -51,6 +51,11 @@ final class GroceryViewModel: ObservableObject {
         items[index].quantity = quantity.trimmingCharacters(in: .whitespacesAndNewlines)
         saveItems()
     }
+    
+    func clearAll() {
+        items.removeAll()
+        saveItems()
+    }
 
     // MARK: - Persistence
 

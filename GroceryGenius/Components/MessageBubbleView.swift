@@ -13,6 +13,8 @@ struct MessageBubbleView: View {
                     .foregroundColor(.white)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
