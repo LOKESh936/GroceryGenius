@@ -1,14 +1,28 @@
 import SwiftUI
+import Firebase
+
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure()
+
+    return true
+  }
+}
 
 @main
 struct GroceryGeniusApp: App {
-    // Shared grocery list for the whole app
-    @StateObject private var groceryViewModel = GroceryViewModel()
+   
+    
+    init () {
+        FirebaseApp.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(groceryViewModel) // inject into all child views
+            RootView()
+      
         }
     }
 }
