@@ -1,16 +1,13 @@
-//
-//  AppColor.swift
-//  GroceryGenius
-//
-//  Created by Lokeshwar Reddy Malli reddy on 11/21/25.
-//
-
 import SwiftUI
 
 struct AppColor {
-    static let primary = Color(hex: "#628141")
-    static let secondary = Color(hex: "#8BAE66")
-    static let accent = Color(hex: "#E67E22")
-    static let background = Color(hex: "#EBD5AB")
-}
+    static let primary    = Color.fromHex("#628141") // deep green
+    static let secondary  = Color.fromHex("#8BAE66") // lighter green
+    static let accent     = Color.fromHex("#E67E22") // orange
+    static let background = Color.fromHex("#EBD5AB") // warm beige
 
+    static let textPrimary   = Color.black.opacity(0.85)
+    static let textSecondary = Color.black.opacity(0.6)
+
+    static let cardBackground = Color.white.opacity(0.9)
+}
