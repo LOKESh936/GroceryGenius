@@ -15,6 +15,9 @@ struct AIFoodView: View {
     @State private var showScrollToBottom: Bool = false
     @State private var shouldAutoScroll = true
 
+    // ✅ Chats sheet
+    @State private var showChatsSheet = false
+
     private let bottomID = "BOTTOM_ANCHOR"
 
     // MARK: - Body
@@ -81,13 +84,13 @@ struct AIFoodView: View {
                                 }
                             }
 
-                            // Bottom visibility detector
+                            // ✅ RESTORED: Bottom visibility detector (shows ⬇️ button)
                             GeometryReader { geo in
                                 Color.clear
                                     .onChange(of: geo.frame(in: .named("AIChatScroll")).minY) { _, _ in
-                                        // When the bottom anchor's minY is close to the viewport bottom, we are at bottom
                                         let minY = geo.frame(in: .named("AIChatScroll")).minY
-                                        let atBottom = minY < 20 // threshold in points; tweak if needed
+                                        let atBottom = minY < 20
+
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             showScrollToBottom = !atBottom && (vm.messages.count > 0 || vm.isStreaming)
                                         }
@@ -141,17 +144,29 @@ struct AIFoodView: View {
             }
 
             ToolbarItemGroup(placement: .navigationBarTrailing) {
+
+                // ✅ NEW: Chats button
+                Button {
+                    Haptic.light()
+                    showChatsSheet = true
+                } label: {
+                    Image(systemName: "text.bubble")
+                }
+
                 Button { vm.clearChat() } label: {
                     Image(systemName: "trash")
                 }
 
-                // ✅ FIXED: regenerate should regenerate last user prompt, not resend AI output
                 Button {
                     vm.regenerateLast(groceries: groceryViewModel.items)
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
             }
+        }
+        .sheet(isPresented: $showChatsSheet) {
+            AIConversationsSheet()
+                .environmentObject(vm)
         }
     }
 

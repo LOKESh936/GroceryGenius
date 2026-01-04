@@ -1,21 +1,29 @@
 import SwiftUI
-import FirebaseAuth
 
 struct RootView: View {
 
-    @StateObject private var authVM = AuthViewModel()
+    @EnvironmentObject var authVM: AuthViewModel
 
     var body: some View {
-        Group {
-            if authVM.user != nil {
-                // 🔹 User is logged in -> show main app
-                ContentView()
-                    .environmentObject(authVM) // so you can call signOut() in Settings later
-            } else {
-                // 🔸 Not logged in -> show auth screen
+        ZStack {
+            switch authVM.authState {
+            case .loading:
+                LaunchLoadingView()
+
+            case .authenticated:
+                if let user = authVM.user, user.isEmailVerified {
+                    ContentView()
+                        .environmentObject(authVM)
+                } else {
+                    VerifyEmailView()
+                        .environmentObject(authVM)
+                }
+
+            case .unauthenticated:
                 AuthView()
                     .environmentObject(authVM)
             }
         }
+        .animation(.easeInOut, value: authVM.authState)
     }
 }

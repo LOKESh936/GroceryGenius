@@ -2,7 +2,7 @@ import SwiftUI
 
 struct GroceryListView: View {
 
-    @StateObject private var viewModel = GroceryViewModel()
+    @EnvironmentObject var viewModel: GroceryViewModel
 
     @State private var name: String = ""
     @State private var quantity: String = ""

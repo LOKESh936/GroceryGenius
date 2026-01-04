@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
+
     @State private var selectedTab: Tab = .home
+    @Namespace private var tabNamespace   // ✅ FIX
 
     enum Tab: String, CaseIterable, Identifiable {
         case home
@@ -39,7 +41,6 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Optional custom header with subtle blur
                 header
 
                 ZStack {
@@ -81,7 +82,6 @@ struct ContentView: View {
 
             Spacer()
 
-            // Soft glassmorphic pill
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.white.opacity(0.4))
                 .overlay(
@@ -116,10 +116,7 @@ struct ContentView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    .ultraThinMaterial
-                        .opacity(0.95)
-                )
+                .fill(.ultraThinMaterial.opacity(0.95))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5)
@@ -134,13 +131,14 @@ struct ContentView: View {
         let isSelected = tab == selectedTab
 
         return Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.2)) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 selectedTab = tab
             }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: tab.systemImage)
                     .font(.system(size: 18, weight: .semibold))
+
                 if isSelected {
                     Text(tab.title)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -156,15 +154,15 @@ struct ContentView: View {
                         Capsule(style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [
-                                        AppColor.primary,
-                                        AppColor.secondary
-                                    ],
+                                    colors: [AppColor.primary, AppColor.secondary],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
-                            .matchedGeometryEffect(id: "tabBackground", in: NamespaceTabs.ns)
+                            .matchedGeometryEffect(
+                                id: "tabBackground",
+                                in: tabNamespace        // ✅ FIX
+                            )
                     }
                 }
             )
@@ -172,10 +170,4 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
     }
-}
-
-// MARK: - Namespace for matched geometry
-
-private enum NamespaceTabs {
-    @Namespace static var ns
 }
