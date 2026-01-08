@@ -3,31 +3,28 @@ import AVFoundation
 
 struct AIFoodView: View {
 
-    // MARK: - State & Dependencies
-
+    // MARK: - Dependencies
     @EnvironmentObject var vm: AIViewModel
+    @EnvironmentObject var groceryViewModel: GroceryViewModel
     @StateObject private var voice = VoiceInputManager()
 
-    @EnvironmentObject var groceryViewModel: GroceryViewModel
-
+    // MARK: - State
     @State private var inputText: String = ""
-    @State private var isNearBottom: Bool = true
-    @State private var showScrollToBottom: Bool = false
-    @State private var shouldAutoScroll = true
-
-    // ✅ Chats sheet
     @State private var showChatsSheet = false
+
+    // ✅ Scroll control (THIS fixes everything)
+    @State private var userScrolledUp = false
 
     private let bottomID = "BOTTOM_ANCHOR"
 
     // MARK: - Body
-
     var body: some View {
         ZStack {
-            AppColor.background
-                .ignoresSafeArea()
+            AppColor.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
+
+                // ❌ NO HEADER HERE — ContentView owns it
 
                 // MARK: - Chat
                 ScrollViewReader { proxy in
@@ -37,8 +34,8 @@ struct AIFoodView: View {
                             // Empty state
                             if vm.messages.isEmpty && !vm.isStreaming {
                                 emptyState
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 28)
+                                    .padding(.top, 24)
+                                    .padding(.horizontal, 20)
                             }
 
                             // Messages
@@ -47,7 +44,6 @@ struct AIFoodView: View {
                                     message: msg,
                                     onCopy: {
                                         UIPasteboard.general.string = msg.text
-                                        Haptic.success()
                                     },
                                     onSpeak: {
                                         speak(msg.text)
@@ -60,7 +56,7 @@ struct AIFoodView: View {
                                 .padding(.horizontal, 16)
                             }
 
-                            // Streaming message
+                            // Streaming AI message
                             if vm.isStreaming {
                                 if vm.streamingText.isEmpty {
                                     AITypingIndicatorView()
@@ -71,7 +67,6 @@ struct AIFoodView: View {
                                         isStreaming: true,
                                         onCopy: {
                                             UIPasteboard.general.string = vm.streamingText
-                                            Haptic.success()
                                         },
                                         onSpeak: {
                                             speak(vm.streamingText)
@@ -84,85 +79,52 @@ struct AIFoodView: View {
                                 }
                             }
 
-                            // ✅ RESTORED: Bottom visibility detector (shows ⬇️ button)
-                            GeometryReader { geo in
-                                Color.clear
-                                    .onChange(of: geo.frame(in: .named("AIChatScroll")).minY) { _, _ in
-                                        let minY = geo.frame(in: .named("AIChatScroll")).minY
-                                        let atBottom = minY < 20
-
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showScrollToBottom = !atBottom && (vm.messages.count > 0 || vm.isStreaming)
-                                        }
-                                    }
-                            }
-                            .frame(height: 1)
-                            .id(bottomID)
+                            // Bottom anchor (DO NOT REMOVE)
+                            Color.clear
+                                .frame(height: 1)
+                                .id(bottomID)
                         }
-                        .padding(.top, 12)
                         .padding(.bottom, 10)
                     }
-                    .coordinateSpace(name: "AIChatScroll")
-                    .scrollDismissesKeyboard(.interactively)
+
+                    // ✅ Detect USER scroll (critical)
+                    .simultaneousGesture(
+                        DragGesture()
+                            .onChanged { _ in
+                                userScrolledUp = true
+                            }
+                    )
+
+                    // ✅ Auto-scroll ONLY if user didn’t scroll manually
+                    .onChange(of: vm.messages.count) { _, _ in
+                        if !userScrolledUp {
+                            scrollToBottom(proxy)
+                        }
+                    }
 
                     .onChange(of: vm.streamingText) { _, _ in
-                        guard shouldAutoScroll else { return }
-                        scrollToBottom(proxy)
+                        if !userScrolledUp {
+                            scrollToBottom(proxy)
+                        }
                     }
 
-                    .onAppear {
-                        scrollToBottom(proxy)
-                    }
+                    // ✅ Scroll-to-bottom arrow (STABLE)
                     .overlay(alignment: .bottomTrailing) {
-                        if showScrollToBottom {
-                            AIScrollToBottomButton {
-                                scrollToBottom(proxy)
-                            }
-                            .padding(.trailing, 16)
-                            .padding(.bottom, 90)
+                        if userScrolledUp {
+                            scrollDownButton(proxy)
                         }
                     }
                 }
 
-                // MARK: - Input Area
+                // MARK: - Input
                 inputArea
             }
         }
         .onAppear {
             Task { _ = await voice.requestAuthorization() }
         }
-        .navigationTitle("AI Meals")
-        .toolbarBackground(AppColor.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                    Text("AI Meals").fontWeight(.semibold)
-                }
-                .foregroundColor(AppColor.primary)
-            }
-
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-
-                // ✅ NEW: Chats button
-                Button {
-                    Haptic.light()
-                    showChatsSheet = true
-                } label: {
-                    Image(systemName: "text.bubble")
-                }
-
-                Button { vm.clearChat() } label: {
-                    Image(systemName: "trash")
-                }
-
-                Button {
-                    vm.regenerateLast(groceries: groceryViewModel.items)
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
+        .onReceive(NotificationCenter.default.publisher(for: .openAIChats)) { _ in
+            showChatsSheet = true
         }
         .sheet(isPresented: $showChatsSheet) {
             AIConversationsSheet()
@@ -170,141 +132,100 @@ struct AIFoodView: View {
         }
     }
 
-    // MARK: - Empty State
-
+    // MARK: - Empty State (Suggestions)
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+
             Text("Plan meals from what you have")
-                .font(AppFont.subtitle(18))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(AppColor.textPrimary)
 
-            Text("Ask for meal plans, macros, or recipes using your grocery list.")
-                .font(AppFont.body(14))
+            Text("Ask for meal plans, recipes, or macros.")
+                .font(.system(size: 14))
                 .foregroundStyle(AppColor.textSecondary)
 
             VStack(spacing: 10) {
-                AIQuickPromptChip(text: "Create meal plan for 2lbs chicken with rice") {
-                    vm.sendMessage(
-                        "Create meal plan for 2lbs chicken with rice",
-                        groceries: groceryViewModel.items
-                    )
-                }
-
-                AIQuickPromptChip(text: "Make me a quick balanced meal plan for today.") {
-                    vm.sendMessage(
-                        "Make me a quick balanced meal plan for today.",
-                        groceries: groceryViewModel.items
-                    )
-                }
-
-                AIQuickPromptChip(text: "Suggest 3 high-protein dinners using my groceries.") {
-                    vm.sendMessage(
-                        "Suggest 3 high-protein dinners using my groceries.",
-                        groceries: groceryViewModel.items
-                    )
-                }
+                quickPrompt("Create a meal plan using my groceries")
+                quickPrompt("Suggest high-protein meals")
+                quickPrompt("Make a quick balanced meal plan for today")
             }
         }
     }
 
+    private func quickPrompt(_ text: String) -> some View {
+        Button {
+            vm.sendMessage(text, groceries: groceryViewModel.items)
+        } label: {
+            Text(text)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppColor.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(AppColor.cardBackground)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Input Area
-
     private var inputArea: some View {
-        VStack(spacing: 10) {
+        HStack(spacing: 10) {
 
-            HStack {
-                Spacer()
-                Button {
-                    Haptic.light()
-                    vm.sendMessage(
-                        "Make me a quick balanced meal plan for today.",
-                        groceries: groceryViewModel.items
-                    )
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "wand.and.stars")
-                        Text("Magic meal")
-                            .font(AppFont.caption(12))
-                    }
-                    .foregroundColor(AppColor.accent)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
-                    )
-                }
+            Button {
+                voice.isRecording
+                ? voice.stopRecording()
+                : voice.startRecording { inputText = $0 }
+            } label: {
+                Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 26))
+                    .foregroundColor(voice.isRecording ? .red : AppColor.accent)
             }
 
-            HStack(spacing: 10) {
-                // Mic
-                Button {
-                    Haptic.light()
-                    if voice.isRecording {
-                        voice.stopRecording()
-                    } else {
-                        voice.startRecording { text in
-                            self.inputText = text
-                        }
-                    }
-                } label: {
-                    Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundColor(voice.isRecording ? .red : AppColor.accent)
-                        .padding(4)
-                }
-
-                // TextField
-                ZStack(alignment: .leading) {
-                    if inputText.isEmpty {
-                        Text("Ask for a meal plan…")
-                            .font(AppFont.body(14))
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 18)
-                    }
-
-                    TextField("", text: $inputText, axis: .vertical)
-                        .font(AppFont.body(14))
-                        .lineLimit(1...5)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                }
+            TextField("Ask for a meal plan…", text: $inputText, axis: .vertical)
+                .padding(12)
                 .background(.ultraThinMaterial)
-                .clipShape(Capsule())
+                .cornerRadius(18)
 
-                // Send
-                Button {
-                    let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !text.isEmpty else { return }
-                    Haptic.medium()
-                    vm.sendMessage(text, groceries: groceryViewModel.items)
-                    inputText = ""
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(AppColor.accent)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                }
+            Button {
+                let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                vm.sendMessage(text, groceries: groceryViewModel.items)
+                inputText = ""
+            } label: {
+                Image(systemName: "paperplane.fill")
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(AppColor.accent)
+                    .clipShape(Circle())
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
-        .background(
-            LinearGradient(
-                colors: [AppColor.background.opacity(0), AppColor.background],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .bottom)
-        )
+    }
+
+    // MARK: - Scroll Button
+    @ViewBuilder
+    private func scrollDownButton(_ proxy: ScrollViewProxy) -> some View {
+        Button {
+            userScrolledUp = false
+            scrollToBottom(proxy)
+        } label: {
+            Image(systemName: "arrow.down")
+                .foregroundColor(.white)
+                .padding(14)
+                .background(AppColor.primary)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        }
+        .padding(.trailing, 16)
+        .padding(.bottom, 90)
+        .transition(.scale.combined(with: .opacity))
     }
 
     // MARK: - Helpers
-
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         DispatchQueue.main.async {
             withAnimation(.easeOut(duration: 0.25)) {
@@ -314,67 +235,13 @@ struct AIFoodView: View {
     }
 
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = 0.5
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        AVSpeechSynthesizer().speak(utterance)
+        let u = AVSpeechUtterance(string: text)
+        u.rate = 0.5
+        u.voice = AVSpeechSynthesisVoice(language: "en-US")
+        AVSpeechSynthesizer().speak(u)
     }
-
-    // MARK: - Grocery Integration
 
     private func addAssistantMessageToGrocery(_ text: String) {
-        let lines = text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-        var extracted: [(name: String, quantity: String)] = []
-
-        for line in lines {
-            if line.hasPrefix("- ") || line.hasPrefix("• ") {
-                parseLine(String(line.dropFirst(2)), into: &extracted)
-                continue
-            }
-
-            if let dot = line.firstIndex(of: ".") {
-                let prefix = line[..<dot]
-                if Int(prefix) != nil {
-                    let rest = line[line.index(after: dot)...]
-                    parseLine(String(rest), into: &extracted)
-                }
-            }
-        }
-
-        guard !extracted.isEmpty else { return }
-
-        let existing = Set(groceryViewModel.items.map { $0.name.lowercased() })
-
-        for item in extracted {
-            guard !existing.contains(item.name.lowercased()) else { continue }
-            groceryViewModel.addItem(name: item.name, quantity: item.quantity)
-        }
-
-        Haptic.success()
-    }
-
-    private func parseLine(_ line: String,
-                           into results: inout [(name: String, quantity: String)]) {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-
-        let parts = trimmed.split(separator: " ")
-        guard parts.count >= 2 else {
-            results.append((trimmed, ""))
-            return
-        }
-
-        let last = parts.last!.lowercased()
-        let quantityHints = ["g", "kg", "ml", "l", "cup", "cups", "tbsp", "tsp", "x"]
-
-        if quantityHints.contains(where: { last.contains($0) }) {
-            let name = parts.dropLast().joined(separator: " ")
-            results.append((name, String(parts.last!)))
-        } else {
-            results.append((trimmed, ""))
-        }
+        groceryViewModel.addItem(name: text, quantity: "")
     }
 }

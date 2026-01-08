@@ -2,8 +2,10 @@ import SwiftUI
 
 struct ContentView: View {
 
+    @EnvironmentObject var aiVM: AIViewModel
+
     @State private var selectedTab: Tab = .home
-    @Namespace private var tabNamespace   // ✅ FIX
+    @Namespace private var tabNamespace
 
     enum Tab: String, CaseIterable, Identifiable {
         case home
@@ -67,37 +69,67 @@ struct ContentView: View {
     }
 
     // MARK: - Header
-
     private var header: some View {
-        HStack {
+        HStack(alignment: .center, spacing: 12) {
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("GroceryGenius")
                     .font(.system(.title2, design: .rounded, weight: .bold))
                     .foregroundStyle(AppColor.primary)
 
-                Text(selectedTab.title)
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(AppColor.textSecondary)
+                Group {
+                    if selectedTab == .aiMeals {
+                        Text(aiVM.activeConversationTitle)
+                            .id(aiVM.activeConversationTitle)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.easeInOut(duration: 0.22), value: aiVM.activeConversationTitle)
+                    } else {
+                        Text(selectedTab.title)
+                            .id(selectedTab.title)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.easeInOut(duration: 0.22), value: selectedTab)
+                    }
+                }
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(AppColor.textSecondary)
+                .lineLimit(1)
             }
 
             Spacer()
 
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.4))
-                .overlay(
+            // ✅ Right side: bubble + pill aligned perfectly
+            if selectedTab == .aiMeals {
+                HStack(spacing: 10) {
+
+                    Button {
+                        NotificationCenter.default.post(name: .openAIChats, object: nil)
+                    } label: {
+                        Image(systemName: "text.bubble")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(AppColor.primary)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.7))
+                            )
+                    }
+
                     HStack(spacing: 6) {
                         Circle()
                             .fill(AppColor.primary.opacity(0.8))
                             .frame(width: 8, height: 8)
+
                         Text("AI powered")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(AppColor.textPrimary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                )
-                .frame(height: 30)
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal, 12)
+                    .frame(height: 36)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.4))
+                    )
+                }
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
@@ -105,7 +137,6 @@ struct ContentView: View {
     }
 
     // MARK: - Custom Tab Bar
-
     private var customTabBar: some View {
         HStack(spacing: 10) {
             ForEach(Tab.allCases) { tab in
@@ -159,10 +190,7 @@ struct ContentView: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .matchedGeometryEffect(
-                                id: "tabBackground",
-                                in: tabNamespace        // ✅ FIX
-                            )
+                            .matchedGeometryEffect(id: "tabBackground", in: tabNamespace)
                     }
                 }
             )

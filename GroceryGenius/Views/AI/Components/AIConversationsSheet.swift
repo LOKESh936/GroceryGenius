@@ -14,7 +14,7 @@ struct AIConversationsSheet: View {
 
                 VStack(spacing: 12) {
 
-                    // New chat card
+                    // New chat card (blended, not white)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Start a new chat")
                             .font(AppFont.subtitle(16))
@@ -26,7 +26,7 @@ struct AIConversationsSheet: View {
                                 .autocorrectionDisabled(false)
                                 .padding(.vertical, 10)
                                 .padding(.horizontal, 12)
-                                .background(Color.white.opacity(0.75))
+                                .background(AppColor.cardBackground.opacity(0.70))
                                 .cornerRadius(12)
 
                             Button {
@@ -48,7 +48,7 @@ struct AIConversationsSheet: View {
                         }
                     }
                     .padding(16)
-                    .background(AppColor.cardBackground)
+                    .background(AppColor.cardBackground.opacity(0.55))
                     .cornerRadius(18)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -82,9 +82,18 @@ struct AIConversationsSheet: View {
                                                 .foregroundStyle(AppColor.textPrimary)
                                                 .lineLimit(1)
 
-                                            Text(convo.createdAt.formatted(date: .abbreviated, time: .omitted))
-                                                .font(AppFont.caption(12))
-                                                .foregroundStyle(AppColor.textSecondary)
+                                            // ✅ last message preview (if your model has it)
+                                            if !convo.lastMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                                Text(convo.lastMessage)
+                                                    .font(AppFont.caption(12))
+                                                    .foregroundStyle(AppColor.textSecondary)
+                                                    .lineLimit(1)
+                                            } else {
+                                                Text(convo.createdAt.formatted(date: .abbreviated, time: .omitted))
+                                                    .font(AppFont.caption(12))
+                                                    .foregroundStyle(AppColor.textSecondary)
+                                                    .lineLimit(1)
+                                            }
                                         }
 
                                         Spacer()
@@ -97,6 +106,16 @@ struct AIConversationsSheet: View {
                                 }
                                 .buttonStyle(.plain)
                                 .listRowBackground(Color.clear)
+
+                                // ✅ DELETE (swipe)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        Haptic.medium()
+                                        vm.deleteConversation(convo)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     }
@@ -114,8 +133,8 @@ struct AIConversationsSheet: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        Task { await vm.loadConversations() }
                         Haptic.light()
+                        Task { await vm.loadConversations() }
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }

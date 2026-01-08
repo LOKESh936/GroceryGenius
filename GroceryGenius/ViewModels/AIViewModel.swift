@@ -1,11 +1,14 @@
 import Foundation
-import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
+import SwiftUI
 
-// MARK: - Streaming chunk model (for SSE)
+// MARK: - Streaming chunk model
 private struct ChatStreamChunk: Decodable {
     struct Choice: Decodable {
-        struct Delta: Decodable { let content: String? }
+        struct Delta: Decodable {
+            let content: String?
+        }
         let delta: Delta
     }
     let choices: [Choice]
@@ -14,28 +17,27 @@ private struct ChatStreamChunk: Decodable {
 @MainActor
 final class AIViewModel: ObservableObject {
 
+    // MARK: - Published (UI)
+
     @Published var messages: [AIMsg] = []
     @Published var conversations: [AIConversation] = []
 
-    // Streaming state
+    @Published var activeConversationId: String?
+    @Published var activeConversationTitle: String = "AI Meals"
+
     @Published var isStreaming: Bool = false
     @Published var streamingText: String = ""
 
-    private let store = AIHistoryStore()
+    // MARK: - Private
 
+    private let store = AIHistoryStore()
     private var lastUserPrompt: String?
     private var currentTask: Task<Void, Never>?
 
-    // Per-user stable conversation id (active chat)
-    private var conversationId: String = ""
-
-    // Auth listener
     private var authListener: AuthStateDidChangeListenerHandle?
     private var currentUID: String?
 
-    var latestAIText: String? {
-        messages.last(where: { !$0.isUser })?.text
-    }
+    // MARK: - Init / Deinit
 
     init() {
         listenToAuth()
@@ -47,71 +49,48 @@ final class AIViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Auth → setup + restore
+    // MARK: - Auth
 
     private func listenToAuth() {
         authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
 
             self.currentUID = user?.uid
-            self.messages = []
+            self.messages.removeAll()
             self.streamingText = ""
             self.isStreaming = false
 
             guard let uid = user?.uid else {
-                self.conversationId = ""
+                self.activeConversationId = nil
                 self.conversations = []
                 return
             }
 
-            self.conversationId = self.loadOrCreateConversationId(uid: uid)
+            let key = "ai_active_conversation_\(uid)"
+            if let saved = UserDefaults.standard.string(forKey: key) {
+                self.activeConversationId = saved
+            } else {
+                let fresh = UUID().uuidString
+                self.activeConversationId = fresh
+                UserDefaults.standard.set(fresh, forKey: key)
+            }
 
             Task {
                 await self.loadConversations()
-                await self.restoreHistory(uid: uid)
+                await self.restoreMessages()
+                self.syncActiveConversationTitle()
             }
         }
     }
 
-    private func loadOrCreateConversationId(uid: String) -> String {
-        let key = "ai_conversation_id_\(uid)"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-        let new = UUID().uuidString
-        UserDefaults.standard.set(new, forKey: key)
-        return new
-    }
-
-    private func restoreHistory(uid: String) async {
-        guard !conversationId.isEmpty else { return }
-        do {
-            let history = try await store.loadMessages(uid: uid, conversationId: conversationId)
-            self.messages = history
-        } catch {
-            print("❌ Failed to load AI history:", error.localizedDescription)
-        }
-    }
-
-    // ✅ Key fix: ensure the conversation document exists so chats list isn't empty
-    private func ensureConversationExists(title: String) async {
-        guard let uid = currentUID, !conversationId.isEmpty else { return }
-        do {
-            try await store.ensureConversationDocument(uid: uid, conversationId: conversationId, title: title)
-            await loadConversations()
-        } catch {
-            print("❌ ensureConversationExists failed:", error.localizedDescription)
-        }
-    }
-
-    // MARK: - Conversations API (sheet)
+    // MARK: - Conversations
 
     func loadConversations() async {
         guard let uid = currentUID else { return }
         do {
-            self.conversations = try await store.loadConversations(uid: uid)
+            conversations = try await store.loadConversations(uid: uid)
         } catch {
-            print("❌ Failed to load conversations:", error.localizedDescription)
+            print("❌ loadConversations:", error.localizedDescription)
         }
     }
 
@@ -121,17 +100,19 @@ final class AIViewModel: ObservableObject {
         Task {
             do {
                 let newId = try await store.createConversation(uid: uid, title: title)
-                conversationId = newId
-                UserDefaults.standard.set(newId, forKey: "ai_conversation_id_\(uid)")
 
-                self.messages.removeAll()
-                self.streamingText = ""
-                self.isStreaming = false
-                self.lastUserPrompt = nil
+                activeConversationId = newId
+                activeConversationTitle = title
+                UserDefaults.standard.set(newId, forKey: "ai_active_conversation_\(uid)")
+
+                messages.removeAll()
+                lastUserPrompt = nil
+                streamingText = ""
+                isStreaming = false
 
                 await loadConversations()
             } catch {
-                print("❌ Failed to create conversation:", error.localizedDescription)
+                print("❌ startNewConversation:", error.localizedDescription)
             }
         }
     }
@@ -139,15 +120,18 @@ final class AIViewModel: ObservableObject {
     func switchConversation(_ convo: AIConversation) {
         guard let uid = currentUID else { return }
 
-        conversationId = convo.id
-        UserDefaults.standard.set(convo.id, forKey: "ai_conversation_id_\(uid)")
+        activeConversationId = convo.id
+        activeConversationTitle = convo.title
+        UserDefaults.standard.set(convo.id, forKey: "ai_active_conversation_\(uid)")
 
-        messages = []
+        messages.removeAll()
+        lastUserPrompt = nil
         streamingText = ""
         isStreaming = false
-        lastUserPrompt = nil
 
-        Task { await restoreHistory(uid: uid) }
+        Task {
+            await restoreMessages()
+        }
     }
 
     func deleteConversation(_ convo: AIConversation) {
@@ -157,41 +141,56 @@ final class AIViewModel: ObservableObject {
             do {
                 try await store.deleteConversation(uid: uid, conversationId: convo.id)
 
-                // If user deleted the active one -> start a fresh new conversation id
-                if convo.id == conversationId {
+                if convo.id == activeConversationId {
                     let fresh = UUID().uuidString
-                    conversationId = fresh
-                    UserDefaults.standard.set(fresh, forKey: "ai_conversation_id_\(uid)")
-
+                    activeConversationId = fresh
+                    activeConversationTitle = "AI Meals"
+                    UserDefaults.standard.set(fresh, forKey: "ai_active_conversation_\(uid)")
                     messages.removeAll()
-                    streamingText = ""
-                    isStreaming = false
-                    lastUserPrompt = nil
                 }
 
                 await loadConversations()
             } catch {
-                print("❌ deleteConversation failed:", error.localizedDescription)
+                print("❌ deleteConversation:", error.localizedDescription)
             }
         }
     }
 
-    // MARK: - Messaging API
+    private func syncActiveConversationTitle() {
+        guard let activeConversationId else { return }
+        if let convo = conversations.first(where: { $0.id == activeConversationId }) {
+            activeConversationTitle = convo.title
+        }
+    }
+
+    // MARK: - Restore Messages
+
+    private func restoreMessages() async {
+        guard let uid = currentUID,
+              let convoId = activeConversationId else { return }
+
+        do {
+            messages = try await store.loadMessages(uid: uid, conversationId: convoId)
+        } catch {
+            print("❌ restoreMessages:", error.localizedDescription)
+        }
+    }
+
+    // MARK: - Messaging
 
     func sendMessage(_ text: String, groceries: [GroceryItem] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        guard let uid = currentUID, !conversationId.isEmpty else { return }
-
-        // ✅ Ensure this conversation doc exists
-        Task { await ensureConversationExists(title: String(trimmed.prefix(42))) }
+        guard !trimmed.isEmpty,
+              let uid = currentUID,
+              let convoId = activeConversationId else { return }
 
         let userMessage = AIMsg(text: trimmed, isUser: true)
         messages.append(userMessage)
         lastUserPrompt = trimmed
 
-        // persist user message
-        Task { try? await store.saveMessage(uid: uid, conversationId: conversationId, message: userMessage) }
+        Task {
+            try? await store.saveMessage(uid: uid, conversationId: convoId, message: userMessage)
+        }
 
         currentTask?.cancel()
         isStreaming = true
@@ -202,19 +201,14 @@ final class AIViewModel: ObservableObject {
         }
     }
 
-    func stopStreaming() {
-        currentTask?.cancel()
-        isStreaming = false
-        streamingText = ""
-    }
-
     func clearChat() {
         currentTask?.cancel()
         isStreaming = false
         streamingText = ""
         lastUserPrompt = nil
 
-        guard let uid = currentUID, !conversationId.isEmpty else {
+        guard let uid = currentUID,
+              let convoId = activeConversationId else {
             messages.removeAll()
             return
         }
@@ -223,19 +217,19 @@ final class AIViewModel: ObservableObject {
         messages.removeAll()
 
         Task {
-            do {
-                try await store.clearConversation(uid: uid, conversationId: conversationId, messages: snapshot)
-            } catch {
-                print("❌ clearChat failed:", error.localizedDescription)
-            }
+            try? await store.clearConversation(
+                uid: uid,
+                conversationId: convoId,
+                messages: snapshot
+            )
         }
     }
 
     func regenerateLast(groceries: [GroceryItem] = []) {
-        guard let lastPrompt = lastUserPrompt else { return }
-        sendMessage(lastPrompt, groceries: groceries)
+        guard let lastUserPrompt else { return }
+        sendMessage(lastUserPrompt, groceries: groceries)
     }
-
+    
     // MARK: - OpenAI Streaming (unchanged logic + save final AI msg)
 
     private func streamFromOpenAI(prompt: String, groceries: [GroceryItem]) async {
@@ -362,8 +356,14 @@ final class AIViewModel: ObservableObject {
                 let aiMessage = AIMsg(text: finalText, isUser: false)
                 messages.append(aiMessage)
 
-                if let uid = currentUID, !conversationId.isEmpty {
-                    Task { try? await store.saveMessage(uid: uid, conversationId: conversationId, message: aiMessage) }
+                if let uid = currentUID, let convoId = activeConversationId {
+                    Task {
+                        try? await store.saveMessage(
+                            uid: uid,
+                            conversationId: convoId,
+                            message: aiMessage
+                        )
+                    }
                 }
             }
         } catch {

@@ -27,6 +27,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Services/Untitled.swift,
 			);
 			target = E6CBE1AE2ED03CCC00F2B4E6 /* GroceryGenius */;
 		};

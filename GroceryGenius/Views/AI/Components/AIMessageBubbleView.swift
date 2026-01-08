@@ -14,6 +14,7 @@ struct AIMessageBubbleView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
+
             if !isUser {
                 avatar
             } else {
@@ -21,6 +22,7 @@ struct AIMessageBubbleView: View {
             }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
+
                 if !isUser {
                     Text("GroceryGenius AI")
                         .font(AppFont.caption(11))
@@ -33,9 +35,14 @@ struct AIMessageBubbleView: View {
                     isUser: isUser
                 )
                 .padding(12)
-                .background(bubbleBackground)
+                .background(bubbleBackground)     // ✅ FIXED HERE
                 .overlay(bubbleStroke)
-                .shadow(color: .black.opacity(isUser ? 0.14 : 0.08), radius: 6, x: 0, y: 3)
+                .shadow(
+                    color: .black.opacity(isUser ? 0.14 : 0.08),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
                 .contextMenu {
                     Button("Copy") { onCopy() }
                     if !isUser { Button("Speak") { onSpeak() } }
@@ -56,10 +63,16 @@ struct AIMessageBubbleView: View {
         .padding(.top, 2)
     }
 
+    // MARK: - Avatar
+
     private var avatar: some View {
         ZStack {
             Circle()
-                .fill(isUser ? AppColor.accent.opacity(0.2) : AppColor.primary.opacity(0.18))
+                .fill(
+                    isUser
+                    ? AppColor.accent.opacity(0.2)
+                    : AppColor.primary.opacity(0.18)
+                )
                 .frame(width: 30, height: 30)
 
             Image(systemName: isUser ? "person.fill" : "sparkles")
@@ -69,24 +82,36 @@ struct AIMessageBubbleView: View {
         .padding(.bottom, 2)
     }
 
+    // MARK: - Bubble Background (✅ PALETTE BLENDED)
+
     private var bubbleBackground: some View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(isUser ? AppColor.accent : Color.white.opacity(0.95))
+            .fill(
+                isUser
+                ? AppColor.accent.opacity(0.85)
+                : AppColor.cardBackground.opacity(0.70) // ✅ WAS WHITE, NOW BLENDED
+            )
             .overlay(
+                // streaming border (unchanged)
                 isStreaming && !isUser
                 ? RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(0.001))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(AppColor.primary.opacity(0.35), lineWidth: 1)
-                            .opacity(0.7)
+                    .stroke(
+                        AppColor.primary.opacity(0.45),
+                        lineWidth: 1
                     )
                 : nil
             )
     }
 
+    // MARK: - Stroke
+
     private var bubbleStroke: some View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .strokeBorder(isUser ? Color.clear : Color.black.opacity(0.05), lineWidth: 0.5)
+            .strokeBorder(
+                isUser
+                ? Color.clear
+                : Color.white.opacity(0.25),
+                lineWidth: 0.6
+            )
     }
 }

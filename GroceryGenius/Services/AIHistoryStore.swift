@@ -27,18 +27,24 @@ final class AIHistoryStore {
         }
     }
 
-    func saveMessage(uid: String, conversationId: String, message: AIMsg) async throws {
-        let base = db.collection("users")
+    func saveMessage(
+        uid: String,
+        conversationId: String,
+        message: AIMsg
+    ) async throws {
+
+        let convoRef = db.collection("users")
             .document(uid)
             .collection("aiMeals")
             .document(conversationId)
 
-        try await base.setData([
-            "updatedAt": FieldValue.serverTimestamp(),
-            "createdAt": FieldValue.serverTimestamp()
+        // Ensure conversation document exists
+        try await convoRef.setData([
+            "updatedAt": FieldValue.serverTimestamp()
         ], merge: true)
 
-        try await base.collection("messages")
+        try await convoRef
+            .collection("messages")
             .document(message.id)
             .setData([
                 "text": message.text,
@@ -47,8 +53,12 @@ final class AIHistoryStore {
             ])
     }
 
-    // ✅ FIXED: clearConversation was deleting wrong doc ids before
-    func clearConversation(uid: String, conversationId: String, messages: [AIMsg]) async throws {
+    func clearConversation(
+        uid: String,
+        conversationId: String,
+        messages: [AIMsg]
+    ) async throws {
+
         let batch = db.batch()
         let base = db.collection("users")
             .document(uid)
@@ -65,22 +75,6 @@ final class AIHistoryStore {
 
     // MARK: - Conversations
 
-    func ensureConversationDocument(uid: String, conversationId: String, title: String) async throws {
-        let ref = db.collection("users")
-            .document(uid)
-            .collection("aiMeals")
-            .document(conversationId)
-
-        let snap = try await ref.getDocument()
-        if snap.exists { return }
-
-        try await ref.setData([
-            "title": title,
-            "createdAt": FieldValue.serverTimestamp(),
-            "updatedAt": FieldValue.serverTimestamp()
-        ])
-    }
-
     func createConversation(uid: String, title: String) async throws -> String {
         let ref = db.collection("users")
             .document(uid)
@@ -89,6 +83,7 @@ final class AIHistoryStore {
 
         try await ref.setData([
             "title": title,
+            "lastMessage": "",
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp()
         ])
@@ -104,41 +99,58 @@ final class AIHistoryStore {
 
         let snapshot = try await ref.getDocuments()
 
-        return snapshot.documents.compactMap { doc in
+        return snapshot.documents.compactMap { doc -> AIConversation? in
             let data = doc.data()
-            guard let title = data["title"] as? String else { return nil }
+
+            guard let title = data["title"] as? String else {
+                return nil
+            }
 
             let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+            let lastMessage = data["lastMessage"] as? String ?? ""
 
             return AIConversation(
                 id: doc.documentID,
                 title: title,
+                lastMessage: lastMessage,
                 createdAt: createdAt
             )
         }
     }
 
-    // ✅ NEW: delete conversation + all messages
+    func updateConversationMetadata(
+        uid: String,
+        conversationId: String,
+        title: String? = nil,
+        lastMessage: String? = nil
+    ) async throws {
+
+        var update: [String: Any] = [
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+
+        if let title { update["title"] = title }
+        if let lastMessage { update["lastMessage"] = lastMessage }
+
+        try await db.collection("users")
+            .document(uid)
+            .collection("aiMeals")
+            .document(conversationId)
+            .updateData(update)
+    }
+
     func deleteConversation(uid: String, conversationId: String) async throws {
         let convoRef = db.collection("users")
             .document(uid)
             .collection("aiMeals")
             .document(conversationId)
 
-        let messagesRef = convoRef.collection("messages")
+        let messages = try await convoRef.collection("messages").getDocuments()
 
-        // 1) delete all messages (batched)
-        let messagesSnapshot = try await messagesRef.getDocuments()
+        let batch = db.batch()
+        messages.documents.forEach { batch.deleteDocument($0.reference) }
+        batch.deleteDocument(convoRef)
 
-        if !messagesSnapshot.documents.isEmpty {
-            let batch = db.batch()
-            for doc in messagesSnapshot.documents {
-                batch.deleteDocument(doc.reference)
-            }
-            try await batch.commit()
-        }
-
-        // 2) delete conversation doc
-        try await convoRef.delete()
+        try await batch.commit()
     }
 }
