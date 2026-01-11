@@ -7,6 +7,11 @@ struct AIConversationsSheet: View {
 
     @State private var newTitle: String = ""
 
+    // Rename UI state
+    @State private var renamingConvo: AIConversation?
+    @State private var renameText: String = ""
+    @State private var showRenameAlert: Bool = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -14,7 +19,7 @@ struct AIConversationsSheet: View {
 
                 VStack(spacing: 12) {
 
-                    // New chat card (blended, not white)
+                    // New chat card (blended)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Start a new chat")
                             .font(AppFont.subtitle(16))
@@ -82,7 +87,6 @@ struct AIConversationsSheet: View {
                                                 .foregroundStyle(AppColor.textPrimary)
                                                 .lineLimit(1)
 
-                                            // ✅ last message preview (if your model has it)
                                             if !convo.lastMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                                 Text(convo.lastMessage)
                                                     .font(AppFont.caption(12))
@@ -107,7 +111,7 @@ struct AIConversationsSheet: View {
                                 .buttonStyle(.plain)
                                 .listRowBackground(Color.clear)
 
-                                // ✅ DELETE (swipe)
+                                // ✅ Swipe actions: Rename + Delete
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         Haptic.medium()
@@ -115,6 +119,17 @@ struct AIConversationsSheet: View {
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
+                                }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        Haptic.light()
+                                        renamingConvo = convo
+                                        renameText = convo.title
+                                        showRenameAlert = true
+                                    } label: {
+                                        Label("Rename", systemImage: "pencil")
+                                    }
+                                    .tint(AppColor.primary)
                                 }
                             }
                         }
@@ -143,6 +158,23 @@ struct AIConversationsSheet: View {
             }
             .onAppear {
                 Task { await vm.loadConversations() }
+            }
+            .alert("Rename chat", isPresented: $showRenameAlert) {
+                TextField("Chat title", text: $renameText)
+
+                Button("Cancel", role: .cancel) {
+                    renamingConvo = nil
+                    renameText = ""
+                }
+
+                Button("Save") {
+                    guard let convo = renamingConvo else { return }
+                    vm.renameConversation(convo, newTitle: renameText)
+                    renamingConvo = nil
+                    renameText = ""
+                }
+            } message: {
+                Text("Enter a new name for this chat.")
             }
         }
     }

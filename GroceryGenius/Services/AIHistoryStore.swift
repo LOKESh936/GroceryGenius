@@ -38,7 +38,7 @@ final class AIHistoryStore {
             .collection("aiMeals")
             .document(conversationId)
 
-        // Ensure conversation document exists
+        // Always bump updatedAt when a message is saved
         try await convoRef.setData([
             "updatedAt": FieldValue.serverTimestamp()
         ], merge: true)
@@ -75,6 +75,7 @@ final class AIHistoryStore {
 
     // MARK: - Conversations
 
+    /// Creates a new conversation with auto-generated id
     func createConversation(uid: String, title: String) async throws -> String {
         let ref = db.collection("users")
             .document(uid)
@@ -89,6 +90,29 @@ final class AIHistoryStore {
         ])
 
         return ref.documentID
+    }
+
+    /// Ensures the conversation doc exists (important when activeConversationId is a fresh UUID stored in UserDefaults).
+    func ensureConversationExists(
+        uid: String,
+        conversationId: String,
+        titleIfMissing: String
+    ) async throws {
+
+        let ref = db.collection("users")
+            .document(uid)
+            .collection("aiMeals")
+            .document(conversationId)
+
+        let snap = try await ref.getDocument()
+        if snap.exists { return }
+
+        try await ref.setData([
+            "title": titleIfMissing,
+            "lastMessage": "",
+            "createdAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ])
     }
 
     func loadConversations(uid: String) async throws -> [AIConversation] {

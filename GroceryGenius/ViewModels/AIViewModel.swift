@@ -67,18 +67,29 @@ final class AIViewModel: ObservableObject {
             }
 
             let key = "ai_active_conversation_\(uid)"
+
             if let saved = UserDefaults.standard.string(forKey: key) {
                 self.activeConversationId = saved
             } else {
                 let fresh = UUID().uuidString
                 self.activeConversationId = fresh
                 UserDefaults.standard.set(fresh, forKey: key)
+                self.activeConversationTitle = "New meal plan"
             }
 
             Task {
+                // ✅ Ensure Firestore doc exists for the active conversation (prevents missing chats)
+                if let convoId = self.activeConversationId {
+                    try? await self.store.ensureConversationExists(
+                        uid: uid,
+                        conversationId: convoId,
+                        titleIfMissing: self.activeConversationTitle.isEmpty ? "New meal plan" : self.activeConversationTitle
+                    )
+                }
+
                 await self.loadConversations()
-                await self.restoreMessages()
                 self.syncActiveConversationTitle()
+                await self.restoreMessages()
             }
         }
     }
@@ -144,14 +155,58 @@ final class AIViewModel: ObservableObject {
                 if convo.id == activeConversationId {
                     let fresh = UUID().uuidString
                     activeConversationId = fresh
-                    activeConversationTitle = "AI Meals"
+                    activeConversationTitle = "New meal plan"
                     UserDefaults.standard.set(fresh, forKey: "ai_active_conversation_\(uid)")
                     messages.removeAll()
+
+                    // ✅ create missing doc so it shows in list later
+                    try? await store.ensureConversationExists(
+                        uid: uid,
+                        conversationId: fresh,
+                        titleIfMissing: "New meal plan"
+                    )
                 }
 
                 await loadConversations()
+                syncActiveConversationTitle()
             } catch {
                 print("❌ deleteConversation:", error.localizedDescription)
+            }
+        }
+    }
+
+    /// ✅ Rename (called from AIConversationsSheet)
+    func renameConversation(_ convo: AIConversation, newTitle: String) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let uid = currentUID else { return }
+
+        // optimistic UI update
+        if let idx = conversations.firstIndex(where: { $0.id == convo.id }) {
+            let updated = AIConversation(
+                id: convo.id,
+                title: trimmed,
+                lastMessage: conversations[idx].lastMessage,
+                createdAt: conversations[idx].createdAt
+            )
+            conversations[idx] = updated
+        }
+
+        if convo.id == activeConversationId {
+            activeConversationTitle = trimmed
+        }
+
+        Task {
+            do {
+                try await store.updateConversationMetadata(
+                    uid: uid,
+                    conversationId: convo.id,
+                    title: trimmed,
+                    lastMessage: nil
+                )
+                await loadConversations()
+                syncActiveConversationTitle()
+            } catch {
+                print("❌ renameConversation:", error.localizedDescription)
             }
         }
     }
@@ -189,7 +244,22 @@ final class AIViewModel: ObservableObject {
         lastUserPrompt = trimmed
 
         Task {
+            // ensure convo exists
+            try? await store.ensureConversationExists(
+                uid: uid,
+                conversationId: convoId,
+                titleIfMissing: activeConversationTitle.isEmpty ? "New meal plan" : activeConversationTitle
+            )
+
             try? await store.saveMessage(uid: uid, conversationId: convoId, message: userMessage)
+
+            // ✅ lastMessage preview
+            try? await store.updateConversationMetadata(
+                uid: uid,
+                conversationId: convoId,
+                title: nil,
+                lastMessage: trimmed
+            )
         }
 
         currentTask?.cancel()
@@ -222,6 +292,17 @@ final class AIViewModel: ObservableObject {
                 conversationId: convoId,
                 messages: snapshot
             )
+
+            // reset preview when cleared
+            try? await store.updateConversationMetadata(
+                uid: uid,
+                conversationId: convoId,
+                title: nil,
+                lastMessage: ""
+            )
+
+            await loadConversations()
+            syncActiveConversationTitle()
         }
     }
 
@@ -229,8 +310,38 @@ final class AIViewModel: ObservableObject {
         guard let lastUserPrompt else { return }
         sendMessage(lastUserPrompt, groceries: groceries)
     }
-    
-    // MARK: - OpenAI Streaming (unchanged logic + save final AI msg)
+
+    // MARK: - Helpers (title + preview)
+
+    private func makePreview(from text: String) -> String {
+        let cleaned = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleaned.count <= 90 { return cleaned }
+        let idx = cleaned.index(cleaned.startIndex, offsetBy: 90)
+        return String(cleaned[..<idx])
+    }
+
+    private func shouldAutoRenameCurrentChat() -> Bool {
+        let t = activeConversationTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return t.isEmpty || t == "new meal plan" || t == "ai meals"
+    }
+
+    private func autoRenameTitle(from prompt: String) -> String {
+        let cleaned = prompt
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleaned.isEmpty { return "Meal plan" }
+        if cleaned.count <= 28 { return cleaned }
+
+        let idx = cleaned.index(cleaned.startIndex, offsetBy: 28)
+        return String(cleaned[..<idx]) + "…"
+    }
+
+    // MARK: - OpenAI Streaming (save final AI msg + update lastMessage + auto-rename)
 
     private func streamFromOpenAI(prompt: String, groceries: [GroceryItem]) async {
         guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String,
@@ -267,6 +378,7 @@ final class AIViewModel: ObservableObject {
         }
 
         let systemContent = """
+        
         You are **GroceryGenius**, an in-app meal-planning and grocery assistant.
 
         Your goals:
@@ -357,12 +469,36 @@ final class AIViewModel: ObservableObject {
                 messages.append(aiMessage)
 
                 if let uid = currentUID, let convoId = activeConversationId {
+                    let preview = makePreview(from: finalText)
+
                     Task {
-                        try? await store.saveMessage(
+                        try? await store.saveMessage(uid: uid, conversationId: convoId, message: aiMessage)
+
+                        // ✅ update lastMessage preview for list
+                        try? await store.updateConversationMetadata(
                             uid: uid,
                             conversationId: convoId,
-                            message: aiMessage
+                            title: nil,
+                            lastMessage: preview
                         )
+
+                        // ✅ auto-rename if it's still default
+                        if shouldAutoRenameCurrentChat() {
+                            let newTitle = autoRenameTitle(from: prompt)
+
+                            // optimistic UI update
+                            activeConversationTitle = newTitle
+
+                            try? await store.updateConversationMetadata(
+                                uid: uid,
+                                conversationId: convoId,
+                                title: newTitle,
+                                lastMessage: nil
+                            )
+                        }
+
+                        await loadConversations()
+                        syncActiveConversationTitle()
                     }
                 }
             }
@@ -376,3 +512,5 @@ final class AIViewModel: ObservableObject {
         isStreaming = false
     }
 }
+
+

@@ -88,8 +88,8 @@ struct AIMessageBubbleView: View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(
                 isUser
-                ? AppColor.accent.opacity(0.85)
-                : AppColor.cardBackground.opacity(0.70) // ✅ WAS WHITE, NOW BLENDED
+                ? AppColor.userBubble
+                : AppColor.aiBubble // ✅ WAS WHITE, NOW BLENDED
             )
             .overlay(
                 // streaming border (unchanged)

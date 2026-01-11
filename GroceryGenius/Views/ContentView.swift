@@ -98,9 +98,27 @@ struct ContentView: View {
             Spacer()
 
             // ✅ Right side: bubble + pill aligned perfectly
-            if selectedTab == .aiMeals {
-                HStack(spacing: 10) {
+            // ✅ Right side actions
+            HStack(spacing: 10) {
 
+                // HISTORY BUTTON — ONLY FOR GROCERY
+                if selectedTab == .grocery {
+                    Button {
+                        NotificationCenter.default.post(name: .openGroceryHistory, object: nil)
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(AppColor.primary)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.7))
+                            )
+                    }
+                    .accessibilityLabel("Grocery History")
+                }
+
+                // AI header controls (unchanged)
+                if selectedTab == .aiMeals {
                     Button {
                         NotificationCenter.default.post(name: .openAIChats, object: nil)
                     } label: {
@@ -130,6 +148,7 @@ struct ContentView: View {
                     )
                 }
             }
+
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
