@@ -6,6 +6,10 @@ struct ContentView: View {
 
     @State private var selectedTab: Tab = .home
     @Namespace private var tabNamespace
+    @State private var showGroceryHistorySheet = false
+    @StateObject private var groceryHistoryVM = GroceryHistoryViewModel()
+    @EnvironmentObject var groceryVM: GroceryViewModel
+
 
     enum Tab: String, CaseIterable, Identifiable {
         case home
@@ -58,6 +62,7 @@ struct ContentView: View {
                     case .settings:
                         SettingsView()
                     }
+                    
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -66,6 +71,15 @@ struct ContentView: View {
                 customTabBar
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openGroceryHistory)) { _ in
+            showGroceryHistorySheet = true
+        }
+        .sheet(isPresented: $showGroceryHistorySheet) {
+            GroceryHistoryView()
+                .environmentObject(groceryHistoryVM)
+                .environmentObject(groceryVM)
+        }
+
     }
 
     // MARK: - Header

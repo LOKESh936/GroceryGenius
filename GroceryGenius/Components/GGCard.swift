@@ -36,7 +36,7 @@ struct GGCard<Content: View>: View {
                 .padding(16)
         }
         // ✅ KEY FIX
-        .allowsHitTesting(onTap != nil)
+        .allowsHitTesting(true)
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isPressed)
         .gesture(

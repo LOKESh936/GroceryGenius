@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct RenameHistorySheet: View {
+
     let history: GroceryHistory
     @EnvironmentObject var vm: GroceryHistoryViewModel
     @Environment(\.dismiss) private var dismiss
+
     @State private var title: String
 
     init(history: GroceryHistory) {
@@ -13,21 +15,47 @@ struct RenameHistorySheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("Title", text: $title)
+            ZStack {
+                AppColor.background.ignoresSafeArea()
+
+                VStack(spacing: 24) {
+
+                    SectionHeader(
+                        title: "Rename List",
+                        subtitle: "Update the name for this shopping history"
+                    )
+
+                    GGCard {
+                        TextField("History title", text: $title)
+                            .font(AppFont.body(16))
+                            .foregroundStyle(AppColor.textPrimary)
+                            .padding(12)
+                            .background(AppColor.cardElevated)
+                            .cornerRadius(12)
+                    }
+
+                    Spacer()
+                }
+                .padding(20)
             }
             .navigationTitle("Rename")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(AppColor.primary)
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
+                        Haptic.medium()
                         Task {
                             await vm.rename(history, title: title)
                             dismiss()
                         }
                     }
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    .foregroundStyle(AppColor.primary)
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
