@@ -3,13 +3,13 @@ import SwiftUI
 struct ContentView: View {
 
     @EnvironmentObject var aiVM: AIViewModel
+    @EnvironmentObject var groceryVM: GroceryViewModel
 
     @State private var selectedTab: Tab = .home
     @Namespace private var tabNamespace
+
     @State private var showGroceryHistorySheet = false
     @StateObject private var groceryHistoryVM = GroceryHistoryViewModel()
-    @EnvironmentObject var groceryVM: GroceryViewModel
-
 
     enum Tab: String, CaseIterable, Identifiable {
         case home
@@ -62,15 +62,19 @@ struct ContentView: View {
                     case .settings:
                         SettingsView()
                     }
-                    
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 .animation(.easeInOut(duration: 0.22), value: selectedTab)
-
-                customTabBar
             }
         }
+        // ✅ FIX: tab bar is now anchored to the bottom safe area (rotation-safe)
+        .safeAreaInset(edge: .bottom) {
+            customTabBar
+                .padding(.bottom, 8)
+        }
+        // ✅ Keep layout stable when keyboard appears (tab bar won’t jump)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(NotificationCenter.default.publisher(for: .openGroceryHistory)) { _ in
             showGroceryHistorySheet = true
         }
@@ -79,7 +83,6 @@ struct ContentView: View {
                 .environmentObject(groceryHistoryVM)
                 .environmentObject(groceryVM)
         }
-
     }
 
     // MARK: - Header
@@ -111,8 +114,6 @@ struct ContentView: View {
 
             Spacer()
 
-            // ✅ Right side: bubble + pill aligned perfectly
-            // ✅ Right side actions
             HStack(spacing: 10) {
 
                 // HISTORY BUTTON — ONLY FOR GROCERY
@@ -124,14 +125,13 @@ struct ContentView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(AppColor.primary)
                             .frame(width: 36, height: 36)
-                            .background(
-                                Circle().fill(Color.white.opacity(0.7))
-                            )
+                            // ✅ Dark mode safe surface (avoid Color.white.opacity)
+                            .background(Circle().fill(AppColor.chromeSurface))
                     }
                     .accessibilityLabel("Grocery History")
                 }
 
-                // AI header controls (unchanged)
+                // AI header controls
                 if selectedTab == .aiMeals {
                     Button {
                         NotificationCenter.default.post(name: .openAIChats, object: nil)
@@ -140,14 +140,12 @@ struct ContentView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(AppColor.primary)
                             .frame(width: 36, height: 36)
-                            .background(
-                                Circle().fill(Color.white.opacity(0.7))
-                            )
+                            .background(Circle().fill(AppColor.chromeSurface))
                     }
 
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(AppColor.primary.opacity(0.8))
+                            .fill(AppColor.primary.opacity(0.85))
                             .frame(width: 8, height: 8)
 
                         Text("AI powered")
@@ -158,11 +156,10 @@ struct ContentView: View {
                     .frame(height: 36)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.4))
+                            .fill(AppColor.chromeSurface.opacity(0.85))
                     )
                 }
             }
-
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
@@ -180,15 +177,16 @@ struct ContentView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.95))
+                .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5)
+                        .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.5)
                 )
                 .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
         )
         .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        // ✅ Important: full-width safe for rotation
+        .frame(maxWidth: .infinity)
     }
 
     private func tabButton(for tab: Tab) -> some View {
@@ -209,7 +207,7 @@ struct ContentView: View {
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
-            .foregroundStyle(isSelected ? Color.white : AppColor.primary.opacity(0.8))
+            .foregroundStyle(isSelected ? Color.white : AppColor.primary.opacity(0.85))
             .padding(.horizontal, isSelected ? 14 : 10)
             .padding(.vertical, 8)
             .background(

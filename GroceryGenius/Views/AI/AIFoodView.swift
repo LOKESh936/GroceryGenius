@@ -3,60 +3,43 @@ import AVFoundation
 
 struct AIFoodView: View {
 
-    // MARK: - Dependencies
     @EnvironmentObject var vm: AIViewModel
     @EnvironmentObject var groceryViewModel: GroceryViewModel
     @StateObject private var voice = VoiceInputManager()
 
-    // MARK: - State
     @State private var inputText: String = ""
     @State private var showChatsSheet = false
 
-    // ✅ Scroll control (THIS fixes everything)
     @State private var userScrolledUp = false
-
     private let bottomID = "BOTTOM_ANCHOR"
 
-    // MARK: - Body
     var body: some View {
         ZStack {
             AppColor.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
 
-                // ❌ NO HEADER HERE — ContentView owns it
-
-                // MARK: - Chat
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 14) {
 
-                            // Empty state
                             if vm.messages.isEmpty && !vm.isStreaming {
                                 emptyState
                                     .padding(.top, 24)
                                     .padding(.horizontal, 20)
                             }
 
-                            // Messages
                             ForEach(vm.messages) { msg in
                                 AIMessageBubbleView(
                                     message: msg,
-                                    onCopy: {
-                                        UIPasteboard.general.string = msg.text
-                                    },
-                                    onSpeak: {
-                                        speak(msg.text)
-                                    },
-                                    onAddItems: {
-                                        addAssistantMessageToGrocery(msg.text)
-                                    }
+                                    onCopy: { UIPasteboard.general.string = msg.text },
+                                    onSpeak: { speak(msg.text) },
+                                    onAddItems: { addAssistantMessageToGrocery(msg.text) }
                                 )
                                 .id(msg.id)
                                 .padding(.horizontal, 16)
                             }
 
-                            // Streaming AI message
                             if vm.isStreaming {
                                 if vm.streamingText.isEmpty {
                                     AITypingIndicatorView()
@@ -65,50 +48,34 @@ struct AIFoodView: View {
                                     AIMessageBubbleView(
                                         message: AIMsg(text: vm.streamingText, isUser: false),
                                         isStreaming: true,
-                                        onCopy: {
-                                            UIPasteboard.general.string = vm.streamingText
-                                        },
-                                        onSpeak: {
-                                            speak(vm.streamingText)
-                                        },
-                                        onAddItems: {
-                                            addAssistantMessageToGrocery(vm.streamingText)
-                                        }
+                                        onCopy: { UIPasteboard.general.string = vm.streamingText },
+                                        onSpeak: { speak(vm.streamingText) },
+                                        onAddItems: { addAssistantMessageToGrocery(vm.streamingText) }
                                     )
                                     .padding(.horizontal, 16)
                                 }
                             }
 
-                            // Bottom anchor (DO NOT REMOVE)
                             Color.clear
                                 .frame(height: 1)
                                 .id(bottomID)
                         }
                         .padding(.bottom, 10)
                     }
-
-                    // ✅ Detect USER scroll (critical)
+                    // ✅ interactive keyboard dismissal (modern iOS feel)
+                    .scrollDismissesKeyboard(.interactively)
+                    // ✅ Tap to dismiss keyboard without breaking scroll
+                    .dismissKeyboardOnTap()
+                    // ✅ Detect user scroll
                     .simultaneousGesture(
-                        DragGesture()
-                            .onChanged { _ in
-                                userScrolledUp = true
-                            }
+                        DragGesture().onChanged { _ in userScrolledUp = true }
                     )
-
-                    // ✅ Auto-scroll ONLY if user didn’t scroll manually
                     .onChange(of: vm.messages.count) { _, _ in
-                        if !userScrolledUp {
-                            scrollToBottom(proxy)
-                        }
+                        if !userScrolledUp { scrollToBottom(proxy) }
                     }
-
                     .onChange(of: vm.streamingText) { _, _ in
-                        if !userScrolledUp {
-                            scrollToBottom(proxy)
-                        }
+                        if !userScrolledUp { scrollToBottom(proxy) }
                     }
-
-                    // ✅ Scroll-to-bottom arrow (STABLE)
                     .overlay(alignment: .bottomTrailing) {
                         if userScrolledUp {
                             scrollDownButton(proxy)
@@ -116,13 +83,10 @@ struct AIFoodView: View {
                     }
                 }
 
-                // MARK: - Input
                 inputArea
             }
         }
-        .onAppear {
-            Task { _ = await voice.requestAuthorization() }
-        }
+        .onAppear { Task { _ = await voice.requestAuthorization() } }
         .onReceive(NotificationCenter.default.publisher(for: .openAIChats)) { _ in
             showChatsSheet = true
         }
@@ -132,10 +96,8 @@ struct AIFoodView: View {
         }
     }
 
-    // MARK: - Empty State (Suggestions)
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 14) {
-
             Text("Plan meals from what you have")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(AppColor.textPrimary)
@@ -154,6 +116,7 @@ struct AIFoodView: View {
 
     private func quickPrompt(_ text: String) -> some View {
         Button {
+            hideKeyboard()
             vm.sendMessage(text, groceries: groceryViewModel.items)
         } label: {
             Text(text)
@@ -170,14 +133,11 @@ struct AIFoodView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Input Area
     private var inputArea: some View {
         HStack(spacing: 10) {
 
             Button {
-                voice.isRecording
-                ? voice.stopRecording()
-                : voice.startRecording { inputText = $0 }
+                voice.isRecording ? voice.stopRecording() : voice.startRecording { inputText = $0 }
             } label: {
                 Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                     .font(.system(size: 26))
@@ -188,12 +148,13 @@ struct AIFoodView: View {
                 .padding(12)
                 .background(.ultraThinMaterial)
                 .cornerRadius(18)
+                .submitLabel(.send)
+                .onSubmit {
+                    send()
+                }
 
             Button {
-                let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { return }
-                vm.sendMessage(text, groceries: groceryViewModel.items)
-                inputText = ""
+                send()
             } label: {
                 Image(systemName: "paperplane.fill")
                     .foregroundColor(.white)
@@ -206,7 +167,15 @@ struct AIFoodView: View {
         .padding(.bottom, 10)
     }
 
-    // MARK: - Scroll Button
+    private func send() {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        hideKeyboard()
+        vm.sendMessage(text, groceries: groceryViewModel.items)
+        inputText = ""
+        userScrolledUp = false
+    }
+
     @ViewBuilder
     private func scrollDownButton(_ proxy: ScrollViewProxy) -> some View {
         Button {
@@ -225,7 +194,6 @@ struct AIFoodView: View {
         .transition(.scale.combined(with: .opacity))
     }
 
-    // MARK: - Helpers
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         DispatchQueue.main.async {
             withAnimation(.easeOut(duration: 0.25)) {

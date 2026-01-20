@@ -25,8 +25,9 @@ struct AIChatsListView: View {
                             TextField("Chat title (optional)", text: $newTitle)
                                 .padding(.vertical, 10)
                                 .padding(.horizontal, 12)
-                                .background(Color.white.opacity(0.8))
+                                .background(AppColor.cardElevated)
                                 .cornerRadius(12)
+                                .submitLabel(.done)
 
                             Button {
                                 let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,9 +65,14 @@ struct AIChatsListView: View {
                                             .font(AppFont.subtitle(15))
                                             .foregroundStyle(AppColor.textPrimary)
 
-                                        Text(convo.createdAt.formatted(date: .abbreviated, time: .omitted))
-                                            .font(AppFont.caption(12))
-                                            .foregroundStyle(AppColor.textSecondary)
+                                        Text(
+                                            convo.createdAt.formatted(
+                                                date: .abbreviated,
+                                                time: .omitted
+                                            )
+                                        )
+                                        .font(AppFont.caption(12))
+                                        .foregroundStyle(AppColor.textSecondary)
                                     }
 
                                     Spacer()
@@ -88,16 +94,18 @@ struct AIChatsListView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
+                    .scrollDismissesKeyboard(.interactively)
                 }
+                .padding(.bottom, 20)
             }
+            // ✅ THIS is the key line
+            .keyboardDismissable()
             .navigationTitle("Chats")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                    .foregroundStyle(AppColor.primary)
+                    Button("Close") { dismiss() }
+                        .foregroundStyle(AppColor.primary)
                 }
             }
             .onAppear {

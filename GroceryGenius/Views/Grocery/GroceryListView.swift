@@ -27,6 +27,11 @@ struct GroceryListView: View {
     // MARK: - Focus
     @FocusState private var focusedField: Field?
     enum Field { case name, qty }
+    
+    enum Layout {
+        static let tabBarHeight: CGFloat = 10
+    }
+
 
     // MARK: - Filtering
     private var filteredItems: [GroceryItem] {
@@ -148,6 +153,7 @@ struct GroceryListView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
+            .padding(.bottom, Layout.tabBarHeight)
         }
         .navigationTitle("Groceries")
         .navigationBarTitleDisplayMode(.inline)

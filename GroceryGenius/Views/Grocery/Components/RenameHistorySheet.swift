@@ -32,12 +32,16 @@ struct RenameHistorySheet: View {
                             .padding(12)
                             .background(AppColor.cardElevated)
                             .cornerRadius(12)
+                            .submitLabel(.done)
+                            .onSubmit { hideKeyboard() }
                     }
 
                     Spacer()
                 }
                 .padding(20)
             }
+            // ✅ Tap anywhere to dismiss
+            .dismissKeyboardOnTap()
             .navigationTitle("Rename")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
