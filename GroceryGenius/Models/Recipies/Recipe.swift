@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseFirestore
 
 struct Recipe: Identifiable, Codable {
     let id: String

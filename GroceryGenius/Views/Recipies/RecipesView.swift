@@ -1,11 +1,21 @@
 import SwiftUI
 
+// MARK: - RecipesView
 struct RecipesView: View {
 
-    @State private var searchText: String = ""
+    // UI state
+    @State private var searchText = ""
     @State private var sort: Sort = .recent
     @State private var showNewRecipeSheet = false
 
+    // Search focus + animations
+    @FocusState private var isSearchFocused: Bool
+    @State private var isCollapsed = false
+
+    // Filters
+    @State private var selectedFilters: Set<RecipeFilter> = []
+
+    // Demo data (kept exactly as requested)
     @State private var recipes: [RecipeUIModel] = RecipeUIModel.sample
 
     enum Sort: String, CaseIterable, Identifiable {
@@ -13,250 +23,299 @@ struct RecipesView: View {
         case aToZ = "A–Z"
 
         var id: String { rawValue }
+
         var systemImage: String {
             switch self {
             case .recent: return "clock"
-            case .aToZ:   return "textformat"
+            case .aToZ: return "textformat"
             }
         }
     }
 
+    // MARK: - Filter + Search + Sort
     private var filtered: [RecipeUIModel] {
-        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let base = q.isEmpty ? recipes : recipes.filter {
-            $0.title.lowercased().contains(q) || $0.subtitle.lowercased().contains(q)
+        let q = searchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var base = q.isEmpty
+            ? recipes
+            : recipes.filter {
+                $0.title.lowercased().contains(q) ||
+                $0.subtitle.lowercased().contains(q)
+            }
+
+        if !selectedFilters.isEmpty {
+            base = base.filter { recipe in
+                Set(recipe.tags).isSuperset(of: selectedFilters)
+            }
         }
 
-        switch sort {
-        case .recent:
-            return base.sorted { $0.createdAt > $1.createdAt }
-        case .aToZ:
-            return base.sorted {
+        return sort == .recent
+            ? base.sorted { $0.createdAt > $1.createdAt }
+            : base.sorted {
                 $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
             }
+    }
+
+    // MARK: - Body
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColor.background.ignoresSafeArea()
+
+                ScrollView {
+                    LazyVStack(
+                        spacing: 12,
+                        pinnedViews: [.sectionHeaders]
+                    ) {
+
+                        Section(header: stickyHeader) {
+                            content
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .dismissKeyboardOnTap()
+            }
+            .sheet(isPresented: $showNewRecipeSheet) {
+                NewRecipeSheetView()
+            }
         }
     }
 
-    var body: some View {
-        ZStack {
-            AppColor.background.ignoresSafeArea()
-
-            VStack(spacing: 14) {
-
-                GGCard {
-                    VStack(alignment: .leading, spacing: 12) {
-
-                        HStack {
-                            Text("Recipes")
-                                .font(AppFont.title(22))
-                                .foregroundStyle(AppColor.textPrimary)
-
-                            Spacer()
-
-                            Menu {
-                                ForEach(Sort.allCases) { option in
-                                    Button {
-                                        Haptic.light()
-                                        sort = option
-                                    } label: {
-                                        Label(option.rawValue, systemImage: option.systemImage)
-                                    }
-                                }
-                            } label: {
-                                Image(systemName: "arrow.up.arrow.down")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(AppColor.primary)
-                                    .frame(width: 36, height: 36)
-                                    .background(Circle().fill(AppColor.chromeSurface))
-                            }
-
-                            Button {
-                                Haptic.medium()
-                                showNewRecipeSheet = true
-                            } label: {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 42, height: 42)
-                                    .background(AppColor.accent)
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
-                            }
-                        }
-
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(AppColor.primary.opacity(0.75))
-
-                            TextField("Search recipes", text: $searchText)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled(true)
-                                .foregroundStyle(AppColor.textPrimary)
-                                .submitLabel(.done)
-                                .onSubmit { hideKeyboard() }
-
-                            if !searchText.isEmpty {
-                                Button {
-                                    Haptic.light()
-                                    searchText = ""
-                                    hideKeyboard()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(AppColor.primary.opacity(0.45))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(12)
-                        .background(AppColor.cardBackground.opacity(0.65))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
-                        )
-                        .cornerRadius(14)
-                    }
-                }
+    // MARK: - Content
+    @ViewBuilder
+    private var content: some View {
+        if filtered.isEmpty {
+            emptyState
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.top, 16)
+                .padding(.bottom, 200)
+        } else {
+            VStack(spacing: 12) {
+                ForEach(filtered) { recipe in
+                    NavigationLink {
+                        RecipeDetailView(recipe: recipe)
+                    } label: {
+                        RecipeRow(recipe: recipe)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 24)
+        }
+    }
 
-                if filtered.isEmpty {
-                    emptyState
-                        .padding(.horizontal, 16)
-                    Spacer()
-                } else {
-                    list
+    // MARK: - Sticky Header
+    private var stickyHeader: some View {
+        VStack(spacing: isCollapsed ? 8 : 10) {
+            searchBar
+            filterChipsRow
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, isCollapsed ? 8 : 10)
+        .background(
+            AppColor.background
+                .opacity(0.98)
+                .overlay(
+                    Rectangle()
+                        .fill(AppColor.divider.opacity(0.6))
+                        .frame(height: 0.5)
+                        .opacity(isCollapsed ? 1 : 0),
+                    alignment: .bottom
+                )
+        )
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: ScrollYKey.self,
+                    value: geo.frame(in: .global).minY
+                )
+            }
+        )
+        .onPreferenceChange(ScrollYKey.self) { minY in
+            let shouldCollapse = minY < 120
+            if shouldCollapse != isCollapsed {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    isCollapsed = shouldCollapse
                 }
             }
         }
-        // ✅ tap anywhere dismiss keyboard
-        .dismissKeyboardOnTap()
-        .sheet(isPresented: $showNewRecipeSheet) {
-            NewRecipeSheetView()
+    }
+
+    // MARK: - Search Bar
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14))
+                .foregroundStyle(AppColor.primary.opacity(0.75))
+
+            TextField("Search recipes", text: $searchText)
+                .font(.system(size: 15))
+                .focused($isSearchFocused)
+                .submitLabel(.done)
+                .onSubmit { dismissSearch() }
+
+            if !searchText.isEmpty && isSearchFocused {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppColor.textSecondary.opacity(0.7))
+                }
+                .transition(.opacity)
+            }
+
+            Spacer(minLength: 8)
+
+            Menu {
+                ForEach(Sort.allCases) { option in
+                    Button {
+                        sort = option
+                    } label: {
+                        Label(option.rawValue, systemImage: option.systemImage)
+                    }
+                }
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(AppColor.chromeSurface))
+            }
+
+            Button {
+                dismissSearch()
+                showNewRecipeSheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .foregroundColor(.white)
+                    .frame(width: 34, height: 34)
+                    .background(AppColor.accent)
+                    .clipShape(Circle())
+            }
+
+            if isSearchFocused {
+                Button("Cancel") {
+                    dismissSearch()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppColor.primary)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, isCollapsed ? 9 : 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(AppColor.cardElevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(
+                            isSearchFocused
+                                ? AppColor.primary.opacity(0.35)
+                                : AppColor.divider.opacity(0.7),
+                            lineWidth: 0.8
+                        )
+                )
+        )
+    }
+
+    private func dismissSearch() {
+        hideKeyboard()
+        isSearchFocused = false
+    }
+
+    // MARK: - Filter Chips
+    private var filterChipsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(RecipeFilter.allCases) { chip in
+                    FilterChip(
+                        title: chip.title,
+                        systemImage: chip.systemImage,
+                        isSelected: selectedFilters.contains(chip)
+                    ) {
+                        if selectedFilters.contains(chip) {
+                            selectedFilters.remove(chip)
+                        } else {
+                            selectedFilters.insert(chip)
+                        }
+                    }
+                }
+
+                if !selectedFilters.isEmpty {
+                    Button("Clear") {
+                        selectedFilters.removeAll()
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppColor.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule().fill(AppColor.chromeSurface.opacity(0.85))
+                    )
+                }
+            }
+            .padding(.vertical, isCollapsed ? 2 : 4)
         }
     }
 
+    // MARK: - Empty State
     private var emptyState: some View {
         GGCard {
-            VStack(alignment: .leading, spacing: 10) {
-
+            VStack(alignment: .leading, spacing: 8) {
                 Text("No recipes yet")
-                    .font(AppFont.subtitle(17))
-                    .foregroundStyle(AppColor.textPrimary)
+                    .font(AppFont.subtitle(16))
 
-                Text("Create your first recipe, or later we’ll add saving from AI meals.")
+                Text("Create one, or save from AI Meals later.")
                     .font(AppFont.body(14))
                     .foregroundStyle(AppColor.textSecondary)
 
-                Button {
-                    Haptic.medium()
-                    hideKeyboard()
+                Button("Create Recipe") {
                     showNewRecipeSheet = true
-                } label: {
-                    Text("Create Recipe")
-                        .font(AppFont.subtitle(15))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Capsule()
-                                .fill(AppColor.primary)
-                                .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 4)
-                        )
                 }
-                .buttonStyle(.plain)
-                .padding(.top, 6)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(AppColor.primary))
             }
         }
     }
-
-    private var list: some View {
-        List {
-            ForEach(filtered) { recipe in
-                RecipeRow(recipe: recipe)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            if let idx = recipes.firstIndex(where: { $0.id == recipe.id }) {
-                                recipes.remove(at: idx)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        Button {
-                            // edit later
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        .tint(AppColor.primary)
-                    }
-            }
+    private struct ScrollYKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .background(Color.clear)
-        .dismissKeyboardOnTap()
     }
-}
+    private struct FilterChip: View {
+        let title: String
+        let systemImage: String
+        let isSelected: Bool
+        let action: () -> Void
 
-private struct RecipeRow: View {
-    let recipe: RecipeUIModel
-
-    var body: some View {
-        GGCard {
-            HStack(spacing: 12) {
-
-                Circle()
-                    .fill(AppColor.chromeSurface)
-                    .frame(width: 42, height: 42)
-                    .overlay(
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(AppColor.primary)
-                    )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(recipe.title)
-                        .font(AppFont.subtitle(15))
-                        .foregroundStyle(AppColor.textPrimary)
-                        .lineLimit(1)
-
-                    Text(recipe.subtitle)
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(AppColor.textSecondary)
-                        .lineLimit(1)
-
-                    Text(recipe.createdAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(AppFont.caption(11))
-                        .foregroundStyle(AppColor.textSecondary.opacity(0.85))
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 6) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppColor.textSecondary.opacity(0.7))
+                .foregroundStyle(isSelected ? .white : AppColor.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? AppColor.primary : AppColor.chromeSurface.opacity(0.85))
+                )
             }
+            .buttonStyle(.plain)
         }
     }
-}
 
-private struct RecipeUIModel: Identifiable {
-    let id: String
-    var title: String
-    var subtitle: String
-    var createdAt: Date
 
-    static let sample: [RecipeUIModel] = [
-        .init(id: UUID().uuidString, title: "Chicken Rice Bowl", subtitle: "20 min • high protein", createdAt: Date().addingTimeInterval(-86_000)),
-        .init(id: UUID().uuidString, title: "Paneer Wrap", subtitle: "15 min • quick", createdAt: Date().addingTimeInterval(-200_000)),
-        .init(id: UUID().uuidString, title: "Oats + Banana", subtitle: "5 min • breakfast", createdAt: Date().addingTimeInterval(-400_000))
-    ]
-}
-
-#Preview {
-    RecipesView()
 }

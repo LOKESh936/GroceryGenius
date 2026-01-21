@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var showGroceryHistorySheet = false
     @StateObject private var groceryHistoryVM = GroceryHistoryViewModel()
 
+    @Environment(\.verticalSizeClass) private var vSize
+
     enum Tab: String, CaseIterable, Identifiable {
         case home
         case grocery
@@ -43,8 +45,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            AppColor.background
-                .ignoresSafeArea()
+            AppColor.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 header
@@ -68,13 +69,15 @@ struct ContentView: View {
                 .animation(.easeInOut(duration: 0.22), value: selectedTab)
             }
         }
-        // ✅ FIX: tab bar is now anchored to the bottom safe area (rotation-safe)
+        // ✅ Tab bar anchored to safe area bottom (rotation-safe)
         .safeAreaInset(edge: .bottom) {
             customTabBar
+                .padding(.horizontal, 16)
                 .padding(.bottom, 8)
         }
-        // ✅ Keep layout stable when keyboard appears (tab bar won’t jump)
+        // ✅ Tab bar will not jump when keyboard appears
         .ignoresSafeArea(.keyboard, edges: .bottom)
+
         .onReceive(NotificationCenter.default.publisher(for: .openGroceryHistory)) { _ in
             showGroceryHistorySheet = true
         }
@@ -116,7 +119,6 @@ struct ContentView: View {
 
             HStack(spacing: 10) {
 
-                // HISTORY BUTTON — ONLY FOR GROCERY
                 if selectedTab == .grocery {
                     Button {
                         NotificationCenter.default.post(name: .openGroceryHistory, object: nil)
@@ -125,13 +127,11 @@ struct ContentView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(AppColor.primary)
                             .frame(width: 36, height: 36)
-                            // ✅ Dark mode safe surface (avoid Color.white.opacity)
                             .background(Circle().fill(AppColor.chromeSurface))
                     }
                     .accessibilityLabel("Grocery History")
                 }
 
-                // AI header controls
                 if selectedTab == .aiMeals {
                     Button {
                         NotificationCenter.default.post(name: .openAIChats, object: nil)
@@ -143,21 +143,24 @@ struct ContentView: View {
                             .background(Circle().fill(AppColor.chromeSurface))
                     }
 
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(AppColor.primary.opacity(0.85))
-                            .frame(width: 8, height: 8)
+                    // ✅ On compact height (rotation / mini), don't show the long pill
+                    if vSize != .compact {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(AppColor.primary.opacity(0.85))
+                                .frame(width: 8, height: 8)
 
-                        Text("AI powered")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppColor.textPrimary)
+                            Text("AI powered")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(AppColor.textPrimary)
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(height: 36)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(AppColor.chromeSurface.opacity(0.85))
+                        )
                     }
-                    .padding(.horizontal, 12)
-                    .frame(height: 36)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(AppColor.chromeSurface.opacity(0.85))
-                    )
                 }
             }
         }
@@ -166,30 +169,35 @@ struct ContentView: View {
         .padding(.bottom, 8)
     }
 
-    // MARK: - Custom Tab Bar
+    // MARK: - Custom Tab Bar (Adaptive for small devices)
     private var customTabBar: some View {
-        HStack(spacing: 10) {
-            ForEach(Tab.allCases) { tab in
-                tabButton(for: tab)
+        GeometryReader { geo in
+            let totalWidth = geo.size.width
+            // Rough rule: if each tab gets < ~78pt, don’t show selected title text.
+            let allowLabels = (totalWidth / CGFloat(Tab.allCases.count)) >= 78 && vSize != .compact
+
+            HStack(spacing: 8) {
+                ForEach(Tab.allCases) { tab in
+                    tabButton(for: tab, allowLabel: allowLabels)
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
+            )
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
-        )
-        .padding(.horizontal, 16)
-        // ✅ Important: full-width safe for rotation
-        .frame(maxWidth: .infinity)
+        .frame(height: 64) // ✅ stable height across sizes
     }
 
-    private func tabButton(for tab: Tab) -> some View {
+    private func tabButton(for tab: Tab, allowLabel: Bool) -> some View {
         let isSelected = tab == selectedTab
 
         return Button {
@@ -201,15 +209,16 @@ struct ContentView: View {
                 Image(systemName: tab.systemImage)
                     .font(.system(size: 18, weight: .semibold))
 
-                if isSelected {
+                if isSelected && allowLabel {
                     Text(tab.title)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
             .foregroundStyle(isSelected ? Color.white : AppColor.primary.opacity(0.85))
-            .padding(.horizontal, isSelected ? 14 : 10)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44) // ✅ Apple min touch target
             .background(
                 ZStack {
                     if isSelected {
@@ -225,7 +234,7 @@ struct ContentView: View {
                     }
                 }
             )
-            .contentShape(Capsule())
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

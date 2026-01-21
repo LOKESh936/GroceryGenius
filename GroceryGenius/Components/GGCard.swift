@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct GGCard<Content: View>: View {
+
     let cornerRadius: CGFloat
+    let padding: EdgeInsets
     let content: () -> Content
     var onTap: (() -> Void)?
 
@@ -9,10 +11,12 @@ struct GGCard<Content: View>: View {
 
     init(
         cornerRadius: CGFloat = 20,
+        padding: EdgeInsets = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16),
         onTap: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.cornerRadius = cornerRadius
+        self.padding = padding
         self.onTap = onTap
         self.content = content
     }
@@ -23,7 +27,7 @@ struct GGCard<Content: View>: View {
                 .fill(AppColor.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5)
+                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
                 )
                 .shadow(
                     color: .black.opacity(isPressed ? 0.12 : 0.18),
@@ -33,24 +37,16 @@ struct GGCard<Content: View>: View {
                 )
 
             content()
-                .padding(16)
+                .padding(padding)   
         }
-        // ✅ KEY FIX
-        .allowsHitTesting(true)
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isPressed)
         .gesture(
             onTap == nil ? nil :
             DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        isPressed = true
-                    }
-                }
+                .onChanged { _ in isPressed = true }
                 .onEnded { _ in
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        isPressed = false
-                    }
+                    isPressed = false
                     Haptic.medium()
                     onTap?()
                 }
