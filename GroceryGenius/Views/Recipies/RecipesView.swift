@@ -1,73 +1,69 @@
 import SwiftUI
 
-// MARK: - RecipesView
 struct RecipesView: View {
 
-    // UI state
+    @EnvironmentObject private var vm: RecipesViewModel
+
     @State private var searchText = ""
     @State private var sort: Sort = .recent
-    @State private var showNewRecipeSheet = false
 
-    // Search focus + animations
     @FocusState private var isSearchFocused: Bool
     @State private var isCollapsed = false
+    @State private var selectedTags: Set<RecipeTag> = []
 
-    // Filters
-    @State private var selectedFilters: Set<RecipeFilter> = []
-
-    // Demo data (kept exactly as requested)
-    @State private var recipes: [RecipeUIModel] = RecipeUIModel.sample
+    @State private var activeEditor: EditorRoute?
 
     enum Sort: String, CaseIterable, Identifiable {
         case recent = "Recent"
         case aToZ = "A–Z"
-
         var id: String { rawValue }
 
         var systemImage: String {
             switch self {
             case .recent: return "clock"
-            case .aToZ: return "textformat"
+            case .aToZ:   return "textformat"
             }
         }
     }
 
-    // MARK: - Filter + Search + Sort
-    private var filtered: [RecipeUIModel] {
+    enum EditorRoute: Identifiable {
+        case create
+        case edit(Recipe)
+
+        var id: String {
+            switch self {
+            case .create: return "create"
+            case .edit(let r): return "edit-\(r.id)"
+            }
+        }
+    }
+
+    private var filtered: [Recipe] {
         let q = searchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
-        var base = q.isEmpty
-            ? recipes
-            : recipes.filter {
-                $0.title.lowercased().contains(q) ||
-                $0.subtitle.lowercased().contains(q)
-            }
-
-        if !selectedFilters.isEmpty {
-            base = base.filter { recipe in
-                Set(recipe.tags).isSuperset(of: selectedFilters)
-            }
+        var base = q.isEmpty ? vm.recipes : vm.recipes.filter {
+            $0.title.lowercased().contains(q) || $0.notes.lowercased().contains(q)
         }
 
-        return sort == .recent
-            ? base.sorted { $0.createdAt > $1.createdAt }
-            : base.sorted {
-                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-            }
+        if !selectedTags.isEmpty {
+            base = base.filter { Set($0.tags).isSuperset(of: selectedTags) }
+        }
+
+        switch sort {
+        case .recent:
+            return base.sorted { $0.createdAt > $1.createdAt }
+        case .aToZ:
+            return base.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
     }
 
-    // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
                 AppColor.background.ignoresSafeArea()
 
                 ScrollView {
-                    LazyVStack(
-                        spacing: 12,
-                        pinnedViews: [.sectionHeaders]
-                    ) {
-
+                    LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
                         Section(header: stickyHeader) {
                             content
                         }
@@ -77,29 +73,85 @@ struct RecipesView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .dismissKeyboardOnTap()
             }
-            .sheet(isPresented: $showNewRecipeSheet) {
-                NewRecipeSheetView()
+            .sheet(item: $activeEditor) { route in
+                switch route {
+                case .create:
+                    RecipeEditorSheetView(mode: .create)
+                        .environmentObject(vm)
+
+                case .edit(let recipe):
+                    RecipeEditorSheetView(mode: .edit(recipe))
+                        .environmentObject(vm)
+                }
             }
         }
     }
 
-    // MARK: - Content
     @ViewBuilder
     private var content: some View {
         if filtered.isEmpty {
-            emptyState
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 200)
+            GGCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("No recipes yet")
+                        .font(AppFont.subtitle(16))
+                        .foregroundStyle(AppColor.textPrimary)
+
+                    Text("Create one, or save from AI Meals later.")
+                        .font(AppFont.body(14))
+                        .foregroundStyle(AppColor.textSecondary)
+
+                    Button {
+                        Haptic.medium()
+                        activeEditor = .create
+                    } label: {
+                        Text("Create Recipe")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(Capsule().fill(AppColor.primary))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 220)
+
         } else {
             VStack(spacing: 12) {
                 ForEach(filtered) { recipe in
                     NavigationLink {
                         RecipeDetailView(recipe: recipe)
+                            .environmentObject(vm)
                     } label: {
                         RecipeRow(recipe: recipe)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Edit") { activeEditor = .edit(recipe) }
+
+                        Button(role: .destructive) {
+                            Task { await vm.deleteRecipe(recipe) }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task { await vm.deleteRecipe(recipe) }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        Button {
+                            activeEditor = .edit(recipe)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(AppColor.primary)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -112,7 +164,7 @@ struct RecipesView: View {
     private var stickyHeader: some View {
         VStack(spacing: isCollapsed ? 8 : 10) {
             searchBar
-            filterChipsRow
+            tagChipsRow
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
@@ -146,7 +198,6 @@ struct RecipesView: View {
         }
     }
 
-    // MARK: - Search Bar
     private var searchBar: some View {
         HStack(spacing: 10) {
 
@@ -167,6 +218,7 @@ struct RecipesView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(AppColor.textSecondary.opacity(0.7))
                 }
+                .buttonStyle(.plain)
                 .transition(.opacity)
             }
 
@@ -175,6 +227,7 @@ struct RecipesView: View {
             Menu {
                 ForEach(Sort.allCases) { option in
                     Button {
+                        Haptic.light()
                         sort = option
                     } label: {
                         Label(option.rawValue, systemImage: option.systemImage)
@@ -182,13 +235,16 @@ struct RecipesView: View {
                 }
             } label: {
                 Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppColor.primary)
                     .frame(width: 32, height: 32)
                     .background(Circle().fill(AppColor.chromeSurface))
             }
 
             Button {
+                Haptic.medium()
                 dismissSearch()
-                showNewRecipeSheet = true
+                activeEditor = .create
             } label: {
                 Image(systemName: "plus")
                     .foregroundColor(.white)
@@ -199,6 +255,7 @@ struct RecipesView: View {
 
             if isSearchFocused {
                 Button("Cancel") {
+                    Haptic.light()
                     dismissSearch()
                 }
                 .font(.system(size: 14, weight: .semibold))
@@ -209,18 +266,20 @@ struct RecipesView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, isCollapsed ? 9 : 10)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(AppColor.cardElevated)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .strokeBorder(
                             isSearchFocused
-                                ? AppColor.primary.opacity(0.35)
-                                : AppColor.divider.opacity(0.7),
+                            ? AppColor.primary.opacity(0.35)
+                            : AppColor.divider.opacity(0.7),
                             lineWidth: 0.8
                         )
                 )
         )
+        .animation(.easeInOut(duration: 0.18), value: isSearchFocused)
+        .animation(.easeInOut(duration: 0.18), value: isCollapsed)
     }
 
     private func dismissSearch() {
@@ -228,94 +287,71 @@ struct RecipesView: View {
         isSearchFocused = false
     }
 
-    // MARK: - Filter Chips
-    private var filterChipsRow: some View {
+    private var tagChipsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(RecipeFilter.allCases) { chip in
-                    FilterChip(
-                        title: chip.title,
-                        systemImage: chip.systemImage,
-                        isSelected: selectedFilters.contains(chip)
+                ForEach(RecipeTag.allCases) { tag in
+                    TagChip(
+                        title: tag.title,
+                        systemImage: tag.systemImage,
+                        isSelected: selectedTags.contains(tag)
                     ) {
-                        if selectedFilters.contains(chip) {
-                            selectedFilters.remove(chip)
-                        } else {
-                            selectedFilters.insert(chip)
-                        }
+                        Haptic.light()
+                        if selectedTags.contains(tag) { selectedTags.remove(tag) }
+                        else { selectedTags.insert(tag) }
                     }
                 }
 
-                if !selectedFilters.isEmpty {
-                    Button("Clear") {
-                        selectedFilters.removeAll()
+                if !selectedTags.isEmpty {
+                    Button {
+                        Haptic.light()
+                        selectedTags.removeAll()
+                    } label: {
+                        Text("Clear")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AppColor.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(AppColor.chromeSurface.opacity(0.85)))
                     }
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppColor.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule().fill(AppColor.chromeSurface.opacity(0.85))
-                    )
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.vertical, isCollapsed ? 2 : 4)
         }
+        .animation(.easeInOut(duration: 0.18), value: isCollapsed)
     }
+}
 
-    // MARK: - Empty State
-    private var emptyState: some View {
-        GGCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("No recipes yet")
-                    .font(AppFont.subtitle(16))
+// MARK: - Components
+private struct TagChip: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
 
-                Text("Create one, or save from AI Meals later.")
-                    .font(AppFont.body(14))
-                    .foregroundStyle(AppColor.textSecondary)
-
-                Button("Create Recipe") {
-                    showNewRecipeSheet = true
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-                .background(Capsule().fill(AppColor.primary))
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
             }
+            .foregroundStyle(isSelected ? Color.white : AppColor.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? AppColor.primary : AppColor.chromeSurface.opacity(0.85))
+            )
         }
+        .buttonStyle(.plain)
     }
-    private struct ScrollYKey: PreferenceKey {
-        static var defaultValue: CGFloat = 0
-        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-            value = nextValue()
-        }
-    }
-    private struct FilterChip: View {
-        let title: String
-        let systemImage: String
-        let isSelected: Bool
-        let action: () -> Void
+}
 
-        var body: some View {
-            Button(action: action) {
-                HStack(spacing: 6) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(title)
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(isSelected ? .white : AppColor.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? AppColor.primary : AppColor.chromeSurface.opacity(0.85))
-                )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-
+private struct ScrollYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }

@@ -83,7 +83,9 @@ struct GroceryHistoryView: View {
                                 Text($0.title).tag($0)
                             }
                         }
-                        .onChange(of: vm.sort) { vm.setSort($0) }
+                        .onChange(of: vm.sort) { oldValue, newValue in
+                            vm.setSort(newValue)
+                        }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down")
                     }

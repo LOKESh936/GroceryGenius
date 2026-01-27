@@ -1,5 +1,6 @@
 import SwiftUI
-import Firebase
+import FirebaseCore
+import FirebaseFirestore
 
 @main
 struct GroceryGeniusApp: App {
@@ -7,13 +8,23 @@ struct GroceryGeniusApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var groceryViewModel: GroceryViewModel
     @StateObject private var aiViewModel: AIViewModel
+    @StateObject private var recipesVM = RecipesViewModel()
+   
+    @StateObject private var recipesViewModel: RecipesViewModel
 
     init() {
         FirebaseApp.configure()
 
+        // ✅ Offline-first persistence (robust / correct approach)
+        let db = Firestore.firestore()
+        var settings = db.settings
+        settings.cacheSettings = PersistentCacheSettings()
+        db.settings = settings
+
         _authViewModel = StateObject(wrappedValue: AuthViewModel())
         _groceryViewModel = StateObject(wrappedValue: GroceryViewModel())
         _aiViewModel = StateObject(wrappedValue: AIViewModel())
+        _recipesViewModel = StateObject(wrappedValue: RecipesViewModel())
     }
 
     var body: some Scene {
@@ -22,6 +33,8 @@ struct GroceryGeniusApp: App {
                 .environmentObject(authViewModel)
                 .environmentObject(groceryViewModel)
                 .environmentObject(aiViewModel)
+                .environmentObject(recipesViewModel)
+                .environmentObject(recipesVM)
         }
     }
 }
