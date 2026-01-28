@@ -4,24 +4,11 @@ struct RecipeRow: View {
 
     let recipe: Recipe
 
-    private var subtitle: String {
-        let tagText = recipe.tags.map(\.title)
-
-        if !tagText.isEmpty {
-            return tagText.prefix(3).joined(separator: " • ")
-        }
-
-        if !recipe.notes.isEmpty {
-            return "Notes"
-        }
-
-        return "Saved recipe"
-    }
-
     var body: some View {
         GGCard {
             HStack(spacing: 12) {
 
+                // Icon
                 Circle()
                     .fill(AppColor.chromeSurface)
                     .frame(width: 42, height: 42)
@@ -31,25 +18,54 @@ struct RecipeRow: View {
                             .foregroundStyle(AppColor.primary)
                     )
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
+
+                    // Title
                     Text(recipe.title)
                         .font(AppFont.subtitle(16))
                         .foregroundStyle(AppColor.textPrimary)
-                        .lineLimit(1)
 
-                    Text(subtitle)
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(AppColor.textSecondary)
-                        .lineLimit(1)
+                    // ✅ TAG CHIPS ROW
+                    if !recipe.tags.isEmpty {
+                        tagChips
+                    }
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppColor.textSecondary.opacity(0.6))
             }
-            .padding(.vertical, 12)
         }
+    }
+
+    // MARK: - Chips
+    private var tagChips: some View {
+        HStack(spacing: 6) {
+            ForEach(recipe.tags.prefix(3)) { tag in
+                TagChipView(tag: tag)
+            }
+        }
+    }
+}
+private struct TagChipView: View {
+
+    let tag: RecipeTag
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: tag.systemImage)
+                .font(.system(size: 10, weight: .semibold))
+
+            Text(tag.title)
+                .font(.system(size: 11, weight: .semibold))
+        }
+        .foregroundStyle(AppColor.primary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppColor.chromeSurface)
+        )
     }
 }
