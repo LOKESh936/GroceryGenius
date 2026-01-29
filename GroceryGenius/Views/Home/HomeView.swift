@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Binding var selectedTab: ContentView.Tab
 
     @State private var showHero = false
     @State private var showGrid = false
@@ -27,7 +28,7 @@ struct HomeView: View {
                     )
                     .padding(.horizontal, 20)
 
-                    HomeQuickActionGrid()
+                    HomeQuickActionGrid(selectedTab: $selectedTab)
                         .opacity(showGrid ? 1 : 0)
                         .offset(y: showGrid ? 0 : 24)
                         .animation(

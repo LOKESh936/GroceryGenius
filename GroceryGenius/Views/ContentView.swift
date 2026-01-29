@@ -53,7 +53,7 @@ struct ContentView: View {
                 ZStack {
                     switch selectedTab {
                     case .home:
-                        HomeView()
+                        HomeView(selectedTab: $selectedTab)
                     case .grocery:
                         GroceryListView()
                     case .aiMeals:
