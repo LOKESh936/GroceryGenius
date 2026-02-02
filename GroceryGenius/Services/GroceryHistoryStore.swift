@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseFirestore
 
-final class GroceryHistoryStore {
+final class GroceryHistoryStore: ObservableObject {
 
     private let db = Firestore.firestore()
 
@@ -61,5 +61,23 @@ final class GroceryHistoryStore {
         try await base(uid: uid)
             .document(id)
             .updateData(["title": title])
+    }
+}
+
+// MARK: - Clear All (Settings)
+
+extension GroceryHistoryStore {
+
+    /// Deletes ALL grocery history entries
+    func clearAll(uid: String) async throws {
+
+        let snap = try await base(uid: uid).getDocuments()
+
+        let batch = db.batch()
+        for doc in snap.documents {
+            batch.deleteDocument(doc.reference)
+        }
+
+        try await batch.commit()
     }
 }

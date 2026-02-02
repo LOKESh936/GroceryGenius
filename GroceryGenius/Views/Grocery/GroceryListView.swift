@@ -68,11 +68,6 @@ struct GroceryListView: View {
 
             VStack(alignment: .leading, spacing: 10) {
 
-                Text("Grocery List")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(AppColor.primary)
-                    .padding(.top, 6)
-
                 addRow
                 searchBar
 

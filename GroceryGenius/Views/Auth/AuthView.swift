@@ -7,6 +7,8 @@ struct AuthView: View {
     @State private var showSignUp = false
     @State private var showForgotPassword = false
     @StateObject private var bio = BiometricAuth()
+    @State private var email = ""
+
 
     @FocusState private var focusedField: Field?
 
@@ -164,6 +166,14 @@ struct AuthView: View {
                     }
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onReceive(
+                    NotificationCenter.default.publisher(for: .prefillAuthEmail)
+                ) { notification in
+                    if let email = notification.object as? String {
+                        authVM.email = email
+                        focusedField = .password
+                    }
+                }
             }
             // MARK: - Navigation
             .navigationDestination(isPresented: $showSignUp) {

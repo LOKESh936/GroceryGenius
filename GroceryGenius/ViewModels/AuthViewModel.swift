@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseAuth
+import FirebaseFirestore
 
 @MainActor
 final class AuthViewModel: ObservableObject {
@@ -150,5 +151,29 @@ final class AuthViewModel: ObservableObject {
         email = ""
         password = ""
         errorMessage = nil
+    }
+}
+extension AuthViewModel {
+
+    func ensureUserProfile() async {
+        guard let user = Auth.auth().currentUser else { return }
+
+        let ref = Firestore.firestore()
+            .collection("users")
+            .document(user.uid)
+
+        do {
+            let snapshot = try await ref.getDocument()
+            if snapshot.exists { return }
+
+            try await ref.setData([
+                "uid": user.uid,
+                "email": user.email ?? "",
+                "displayName": user.displayName ?? "",
+                "createdAt": FieldValue.serverTimestamp()
+            ], merge: true)
+        } catch {
+            print("Failed to ensure user profile:", error)
+        }
     }
 }

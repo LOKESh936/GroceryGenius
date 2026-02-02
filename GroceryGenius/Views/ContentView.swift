@@ -4,6 +4,8 @@ struct ContentView: View {
 
     @EnvironmentObject var aiVM: AIViewModel
     @EnvironmentObject var groceryVM: GroceryViewModel
+    @EnvironmentObject var authVM: AuthViewModel
+
 
     @State private var selectedTab: Tab = .home
     @Namespace private var tabNamespace
@@ -61,7 +63,9 @@ struct ContentView: View {
                     case .recipes:
                         RecipesView()
                     case .settings:
-                        SettingsView()
+                        SettingsView {
+                                authVM.signOut()
+                            }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

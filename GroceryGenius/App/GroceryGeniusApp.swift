@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
+import FirebaseAuth
 
 @main
 struct GroceryGeniusApp: App {
@@ -21,6 +22,12 @@ struct GroceryGeniusApp: App {
         settings.cacheSettings = PersistentCacheSettings()
         db.settings = settings
 
+        
+        Auth.auth().addStateDidChangeListener { _, user in
+            guard user != nil else { return }
+            AccountStore.shared.saveCurrentUser()
+        }
+        
         _authViewModel = StateObject(wrappedValue: AuthViewModel())
         _groceryViewModel = StateObject(wrappedValue: GroceryViewModel())
         _aiViewModel = StateObject(wrappedValue: AIViewModel())

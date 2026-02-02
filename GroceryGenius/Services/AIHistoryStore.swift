@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseFirestore
 
-final class AIHistoryStore {
+final class AIHistoryStore: ObservableObject{
 
     private let db = Firestore.firestore()
 
@@ -176,5 +176,27 @@ final class AIHistoryStore {
         batch.deleteDocument(convoRef)
 
         try await batch.commit()
+    }
+}
+
+// MARK: - Clear All (Settings)
+
+extension AIHistoryStore {
+
+    /// Deletes ALL AI conversations and their messages
+    func clearAll(uid: String) async throws {
+
+        let convosRef = db.collection("users")
+            .document(uid)
+            .collection("aiMeals")
+
+        let snapshot = try await convosRef.getDocuments()
+
+        for doc in snapshot.documents {
+            try await deleteConversation(
+                uid: uid,
+                conversationId: doc.documentID
+            )
+        }
     }
 }

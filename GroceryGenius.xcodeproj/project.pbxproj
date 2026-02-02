@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E6326D972F2EA880005B1359 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = E6326D962F2EA880005B1359 /* FirebaseStorage */; };
 		E663FC6A2ED7FDBB006BB68F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E663FC692ED7FDBB006BB68F /* README.md */; };
 		E6A9DB932EE5327000EE6592 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */; };
 		E6A9DB962EE5339100EE6592 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB952EE5339100EE6592 /* FirebaseAuth */; };
@@ -51,6 +52,7 @@
 				E6A9DB9A2EE5339100EE6592 /* FirebaseDatabase in Frameworks */,
 				E6A9DB9C2EE5339100EE6592 /* FirebaseFirestore in Frameworks */,
 				E6A9DB982EE5339100EE6592 /* FirebaseCore in Frameworks */,
+				E6326D972F2EA880005B1359 /* FirebaseStorage in Frameworks */,
 				E6A9DB962EE5339100EE6592 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -58,6 +60,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E6326D952F2EA880005B1359 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E6CBE1A62ED03CCC00F2B4E6 = {
 			isa = PBXGroup;
 			children = (
@@ -65,6 +74,7 @@
 				E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */,
 				E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */,
 				E6CBE1B12ED03CCC00F2B4E6 /* GroceryGenius */,
+				E6326D952F2EA880005B1359 /* Frameworks */,
 				E6CBE1B02ED03CCC00F2B4E6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,6 +111,7 @@
 				E6A9DB972EE5339100EE6592 /* FirebaseCore */,
 				E6A9DB992EE5339100EE6592 /* FirebaseDatabase */,
 				E6A9DB9B2EE5339100EE6592 /* FirebaseFirestore */,
+				E6326D962F2EA880005B1359 /* FirebaseStorage */,
 			);
 			productName = GroceryGenius;
 			productReference = E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */;
@@ -304,7 +315,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryGenius/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to securely protect your account and saved data.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -338,7 +349,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryGenius/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to securely protect your account and saved data.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -394,6 +405,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		E6326D962F2EA880005B1359 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6A9DB942EE5339100EE6592 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		E6A9DB952EE5339100EE6592 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E6A9DB942EE5339100EE6592 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
