@@ -41,7 +41,7 @@ struct SignUpView: View {
 
                         Text("Create Account")
                             .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(AppColor.textPrimary)
+                            .foregroundStyle(AppColor.textPrimary)
                     }
 
                     // MARK: - Form
@@ -53,12 +53,13 @@ struct SignUpView: View {
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .email)
                             .submitLabel(.next)
-                            .onSubmit {
-                                focusedField = .password
-                            }
+                            .onSubmit { focusedField = .password }
                             .padding()
-                            .background(Color.white)
-                            .cornerRadius(14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(AppColor.cardElevated)
+                            )
+                            .foregroundStyle(AppColor.textPrimary)
 
                         SecureInputField(
                             title: "Password",
@@ -71,10 +72,11 @@ struct SignUpView: View {
 
                         // MARK: - Strength Meter
                         VStack(alignment: .leading, spacing: 8) {
+
                             HStack {
                                 Text("Password strength: \(pwLabel)")
                                     .font(.footnote)
-                                    .foregroundColor(AppColor.textSecondary)
+                                    .foregroundStyle(AppColor.textSecondary)
 
                                 Spacer()
 
@@ -82,14 +84,14 @@ struct SignUpView: View {
                                     showPasswordRules.toggle()
                                 } label: {
                                     Image(systemName: "info.circle")
-                                        .foregroundColor(AppColor.primary)
+                                        .foregroundStyle(AppColor.primary)
                                 }
                             }
 
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule()
-                                        .fill(Color.black.opacity(0.08))
+                                        .fill(AppColor.chromeSurface)
                                         .frame(height: 8)
 
                                     Capsule()
@@ -110,6 +112,7 @@ struct SignUpView: View {
                     // MARK: - Create Account Button
                     Button {
                         focusedField = nil
+
                         guard pwValid else {
                             authVM.errorMessage = "Please choose a stronger password."
                             Haptic.light()
@@ -117,9 +120,7 @@ struct SignUpView: View {
                             return
                         }
 
-                        Task {
-                            await authVM.signUp()
-                        }
+                        Task { await authVM.signUp() }
                     } label: {
                         ZStack {
                             if authVM.isLoading {
@@ -130,7 +131,7 @@ struct SignUpView: View {
                                     .font(.system(size: 17, weight: .semibold))
                             }
                         }
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(
@@ -139,15 +140,20 @@ struct SignUpView: View {
                             : AppColor.primary.opacity(0.45)
                         )
                         .cornerRadius(16)
+                        .shadow(
+                            color: AppColor.chromeSurface,
+                            radius: 10,
+                            y: 4
+                        )
                     }
                     .disabled(!authVM.canSubmitSignup || !pwValid || authVM.isLoading)
                     .padding(.horizontal, 24)
 
-                    // MARK: - Error (HIG style)
+                    // MARK: - Error
                     if let error = authVM.errorMessage {
                         Text(error)
                             .font(.footnote)
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                             .padding(.horizontal, 24)
                             .transition(.opacity)
                     }
@@ -158,7 +164,7 @@ struct SignUpView: View {
                     } label: {
                         Text("Already have an account? Sign In")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppColor.primary)
+                            .foregroundStyle(AppColor.primary)
                     }
 
                     Spacer(minLength: 30)
@@ -168,17 +174,21 @@ struct SignUpView: View {
         }
         .sheet(isPresented: $showPasswordRules) {
             PasswordRulesSheet()
-                .presentationDetents([PresentationDetent.medium])
+                .presentationDetents([.medium])
         }
         .navigationBarBackButtonHidden(true)
     }
 }
+
 // MARK: - Password Rules Sheet
 private struct PasswordRulesSheet: View {
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+
             Text("Password Requirements")
                 .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
 
             rule("At least 8 characters")
             rule("At least 1 uppercase letter (A–Z)")
@@ -188,6 +198,7 @@ private struct PasswordRulesSheet: View {
             Spacer()
         }
         .padding(20)
+        .background(AppColor.background)
     }
 
     private func rule(_ text: String) -> some View {
@@ -195,6 +206,6 @@ private struct PasswordRulesSheet: View {
             Image(systemName: "checkmark.seal.fill")
             Text(text)
         }
-        .foregroundColor(.primary)
+        .foregroundStyle(.primary)
     }
 }

@@ -21,15 +21,15 @@ struct ForgotPasswordView: View {
                     VStack(spacing: 14) {
                         Image(systemName: "lock.rotation")
                             .font(.system(size: 44))
-                            .foregroundColor(AppColor.primary)
+                            .foregroundStyle(AppColor.primary)
 
                         Text("Reset Password")
                             .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(AppColor.textPrimary)
+                            .foregroundStyle(AppColor.textPrimary)
 
                         Text("Enter your email and we’ll send you a reset link.")
                             .font(.system(size: 15))
-                            .foregroundColor(AppColor.textSecondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 30)
                     }
@@ -42,16 +42,17 @@ struct ForgotPasswordView: View {
                         .focused($emailFocused)
                         .submitLabel(.done)
                         .padding()
-                        .background(Color.white)
-                        .cornerRadius(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(AppColor.cardElevated)
+                        )
+                        .foregroundStyle(AppColor.textPrimary)
                         .padding(.horizontal, 24)
 
                     // MARK: - Send Reset Link
                     Button {
                         emailFocused = false
-                        Task {
-                            await authVM.resetPassword()
-                        }
+                        Task { await authVM.resetPassword() }
                     } label: {
                         ZStack {
                             if authVM.isLoading {
@@ -62,7 +63,7 @@ struct ForgotPasswordView: View {
                                     .font(.system(size: 17, weight: .semibold))
                             }
                         }
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(
@@ -71,6 +72,11 @@ struct ForgotPasswordView: View {
                             : AppColor.primary
                         )
                         .cornerRadius(16)
+                        .shadow(
+                            color: AppColor.chromeSurface,
+                            radius: 10,
+                            y: 4
+                        )
                     }
                     .disabled(authVM.email.isEmpty || authVM.isLoading)
                     .padding(.horizontal, 24)
@@ -79,13 +85,14 @@ struct ForgotPasswordView: View {
                     if let message = authVM.errorMessage {
                         Text(message)
                             .font(.footnote)
-                            .foregroundColor(
+                            .foregroundStyle(
                                 message.lowercased().contains("sent")
-                                ? .green
-                                : .red
+                                ? Color.green
+                                : Color.red
                             )
-                            .padding(.horizontal, 24)
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                            .transition(.opacity)
                     }
 
                     // MARK: - Back to Login
@@ -94,7 +101,7 @@ struct ForgotPasswordView: View {
                     } label: {
                         Text("Back to Sign In")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppColor.primary)
+                            .foregroundStyle(AppColor.primary)
                     }
                     .padding(.top, 8)
 

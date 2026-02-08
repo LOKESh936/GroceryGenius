@@ -20,18 +20,18 @@ struct VerifyEmailView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "envelope.badge")
                         .font(.system(size: 48))
-                        .foregroundColor(AppColor.primary)
+                        .foregroundStyle(AppColor.primary)
 
                     Text("Verify your email")
                         .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(AppColor.textPrimary)
+                        .foregroundStyle(AppColor.textPrimary)
 
                     Text("""
-We’ve sent a verification link to your email address.
+We’ve sent a verification link to your email address(check Spam too).
 Please verify your email to continue using GroceryGenius.
 """)
                         .font(.system(size: 15))
-                        .foregroundColor(AppColor.textSecondary)
+                        .foregroundStyle(AppColor.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 30)
                 }
@@ -41,28 +41,29 @@ Please verify your email to continue using GroceryGenius.
 
                     // Refresh status
                     Button {
-                        Task {
-                            await refreshVerificationStatus()
-                        }
+                        Task { await refreshVerificationStatus() }
                     } label: {
                         Text("I’ve verified my email")
                             .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(AppColor.primary)
-                            .foregroundColor(.white)
                             .cornerRadius(16)
+                            .shadow(
+                                color: AppColor.chromeSurface,
+                                radius: 10,
+                                y: 4
+                            )
                     }
 
                     // Resend email
                     Button {
-                        Task {
-                            await resendVerification()
-                        }
+                        Task { await resendVerification() }
                     } label: {
                         Text(isSending ? "Sending…" : "Resend verification email")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppColor.primary)
+                            .foregroundStyle(AppColor.primary)
                     }
                     .disabled(isSending)
 
@@ -72,7 +73,7 @@ Please verify your email to continue using GroceryGenius.
                     } label: {
                         Text("Sign out")
                             .font(.system(size: 15))
-                            .foregroundColor(.red.opacity(0.85))
+                            .foregroundStyle(Color.red.opacity(0.85))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -81,13 +82,14 @@ Please verify your email to continue using GroceryGenius.
                 if let message {
                     Text(message)
                         .font(.footnote)
-                        .foregroundColor(
+                        .foregroundStyle(
                             message.lowercased().contains("sent")
-                            ? .green
-                            : .red
+                            ? Color.green
+                            : Color.red
                         )
-                        .padding(.horizontal, 24)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .transition(.opacity)
                 }
 
                 Spacer()

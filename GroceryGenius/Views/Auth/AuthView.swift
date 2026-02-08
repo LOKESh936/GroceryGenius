@@ -7,8 +7,6 @@ struct AuthView: View {
     @State private var showSignUp = false
     @State private var showForgotPassword = false
     @StateObject private var bio = BiometricAuth()
-    @State private var email = ""
-
 
     @FocusState private var focusedField: Field?
 
@@ -42,11 +40,11 @@ struct AuthView: View {
 
                             Text("GroceryGenius")
                                 .font(.system(size: 30, weight: .bold))
-                                .foregroundColor(AppColor.textPrimary)
+                                .foregroundStyle(AppColor.textPrimary)
 
                             Text("Welcome back")
                                 .font(.system(size: 15))
-                                .foregroundColor(AppColor.textSecondary)
+                                .foregroundStyle(AppColor.textSecondary)
                         }
 
                         // MARK: - Form
@@ -58,12 +56,13 @@ struct AuthView: View {
                                 .autocorrectionDisabled()
                                 .focused($focusedField, equals: .email)
                                 .submitLabel(.next)
-                                .onSubmit {
-                                    focusedField = .password
-                                }
+                                .onSubmit { focusedField = .password }
                                 .padding()
-                                .background(Color.white)
-                                .cornerRadius(14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(AppColor.cardElevated)
+                                )
+                                .foregroundStyle(.primary)
 
                             SecureInputField(
                                 title: "Password",
@@ -71,14 +70,13 @@ struct AuthView: View {
                             )
                             .focused($focusedField, equals: .password)
 
-                            // Forgot password
                             Button {
                                 focusedField = nil
                                 showForgotPassword = true
                             } label: {
                                 Text("Forgot password?")
                                     .font(.system(size: 14))
-                                    .foregroundColor(AppColor.primary.opacity(0.85))
+                                    .foregroundStyle(AppColor.textSecondary)
                                     .frame(maxWidth: .infinity, alignment: .trailing)
                             }
                         }
@@ -87,9 +85,7 @@ struct AuthView: View {
                         // MARK: - Sign In Button
                         Button {
                             focusedField = nil
-                            Task {
-                                await authVM.signIn()
-                            }
+                            Task { await authVM.signIn() }
                         } label: {
                             ZStack {
                                 if authVM.isLoading {
@@ -100,7 +96,7 @@ struct AuthView: View {
                                         .font(.system(size: 17, weight: .semibold))
                                 }
                             }
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(
@@ -109,7 +105,11 @@ struct AuthView: View {
                                 : AppColor.primary.opacity(0.5)
                             )
                             .cornerRadius(16)
-                            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                            .shadow(
+                                color: AppColor.chromeSurface,
+                                radius: 10,
+                                y: 4
+                            )
                         }
                         .disabled(!authVM.canSubmitLogin || authVM.isLoading)
                         .padding(.horizontal, 24)
@@ -128,14 +128,19 @@ struct AuthView: View {
                                     Text(bio.buttonTitle)
                                 }
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(AppColor.primary)
+                                .foregroundStyle(AppColor.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(Color.white.opacity(0.85))
-                                .cornerRadius(16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(AppColor.cardBackground)
+                                )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16)
-                                        .stroke(AppColor.primary.opacity(0.18), lineWidth: 1)
+                                        .stroke(
+                                            AppColor.primary.opacity(0.18),
+                                            lineWidth: 1
+                                        )
                                 )
                             }
                             .disabled(authVM.isLoading)
@@ -143,22 +148,21 @@ struct AuthView: View {
                             .onAppear { bio.refreshAvailability() }
                         }
 
-                        // MARK: - Error Message
+                        // MARK: - Error
                         if let error = authVM.errorMessage {
                             Text(error)
                                 .font(.footnote)
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 24)
+                                .foregroundStyle(.red)
                                 .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
                         }
 
-                        // MARK: - Navigation to Sign Up
                         Button {
                             showSignUp = true
                         } label: {
                             Text("New here? Create an account")
                                 .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(AppColor.primary)
+                                .foregroundStyle(AppColor.primary)
                         }
                         .padding(.top, 6)
 
@@ -175,7 +179,6 @@ struct AuthView: View {
                     }
                 }
             }
-            // MARK: - Navigation
             .navigationDestination(isPresented: $showSignUp) {
                 SignUpView()
                     .environmentObject(authVM)

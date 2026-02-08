@@ -81,16 +81,6 @@ struct SettingsView: View {
                                     ChangePasswordView()
                                 }
 
-                                divider()
-
-                                navRow(
-                                    title: "Switch Account",
-                                    icon: "person.2.fill",
-                                    iconColor: .blue
-                                ) {
-                                    SwitchAccountView(onSignOut: onSignOut)
-
-                                }
 
                                 divider()
 
