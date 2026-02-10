@@ -114,39 +114,39 @@ struct AuthView: View {
                         .disabled(!authVM.canSubmitLogin || authVM.isLoading)
                         .padding(.horizontal, 24)
 
-                        // MARK: - Biometric Login
-                        if bio.isAvailable {
-                            Button {
-                                guard !authVM.isLoading else { return }
-                                Task {
-                                    let ok = await bio.authenticate()
-                                    ok ? Haptic.success() : Haptic.light()
-                                }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: bio.buttonIcon)
-                                    Text(bio.buttonTitle)
-                                }
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(AppColor.primary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(AppColor.cardBackground)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(
-                                            AppColor.primary.opacity(0.18),
-                                            lineWidth: 1
-                                        )
-                                )
-                            }
-                            .disabled(authVM.isLoading)
-                            .padding(.horizontal, 24)
-                            .onAppear { bio.refreshAvailability() }
-                        }
+//                        // MARK: - Biometric Login
+//                        if bio.isAvailable {
+//                            Button {
+//                                guard !authVM.isLoading else { return }
+//                                Task {
+//                                    let ok = await bio.authenticate()
+//                                    ok ? Haptic.success() : Haptic.light()
+//                                }
+//                            } label: {
+//                                HStack(spacing: 10) {
+//                                    Image(systemName: bio.buttonIcon)
+//                                    Text(bio.buttonTitle)
+//                                }
+//                                .font(.system(size: 15, weight: .semibold))
+//                                .foregroundStyle(AppColor.primary)
+//                                .frame(maxWidth: .infinity)
+//                                .padding(.vertical, 14)
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 16)
+//                                        .fill(AppColor.cardBackground)
+//                                )
+//                                .overlay(
+//                                    RoundedRectangle(cornerRadius: 16)
+//                                        .stroke(
+//                                            AppColor.primary.opacity(0.18),
+//                                            lineWidth: 1
+//                                        )
+//                                )
+//                            }
+//                            .disabled(authVM.isLoading)
+//                            .padding(.horizontal, 24)
+//                            .onAppear { bio.refreshAvailability() }
+//                        }
 
                         // MARK: - Error
                         if let error = authVM.errorMessage {

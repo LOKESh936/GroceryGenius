@@ -94,6 +94,18 @@ struct AIFoodView: View {
             AIConversationsSheet()
                 .environmentObject(vm)
         }
+        .alert(
+            "Upgrade to Pro",
+            isPresented: $vm.showUpgradePrompt
+        ) {
+            Button("Upgrade") {
+                // future: open paywall
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Free users get 5 AI responses per day. Upgrade to Pro for unlimited access.")
+        }
+
     }
 
     private var emptyState: some View {

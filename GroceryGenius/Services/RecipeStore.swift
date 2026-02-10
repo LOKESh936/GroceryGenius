@@ -83,7 +83,7 @@ final class RecipesStore {
 
         let rRef = recipeRef(uid: uid, id: recipe.id)
 
-        try await db.runTransaction { tx, errorPointer in
+        _ = try await db.runTransaction { tx, errorPointer in
             do {
                 let snap = try tx.getDocument(rRef)
                 let current = try snap.data(as: Recipe.self)

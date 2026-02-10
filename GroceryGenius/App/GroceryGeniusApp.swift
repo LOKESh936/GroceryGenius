@@ -12,18 +12,21 @@ struct GroceryGeniusApp: App {
     @StateObject private var recipesVM = RecipesViewModel()
    
     @StateObject private var recipesViewModel: RecipesViewModel
+    
+    private var authListener: AuthStateDidChangeListenerHandle?
+
 
     init() {
         FirebaseApp.configure()
 
         // ✅ Offline-first persistence (robust / correct approach)
         let db = Firestore.firestore()
-        var settings = db.settings
+        let settings = db.settings
         settings.cacheSettings = PersistentCacheSettings()
         db.settings = settings
 
         
-        Auth.auth().addStateDidChangeListener { _, user in
+        authListener = Auth.auth().addStateDidChangeListener { _, user in
             guard user != nil else { return }
             AccountStore.shared.saveCurrentUser()
         }
@@ -42,6 +45,7 @@ struct GroceryGeniusApp: App {
                 .environmentObject(aiViewModel)
                 .environmentObject(recipesViewModel)
                 .environmentObject(recipesVM)
+                .tint(AppColor.accent)
         }
     }
 }

@@ -79,9 +79,7 @@ struct ContentView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
         }
-        // ✅ Tab bar will not jump when keyboard appears
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-
+    
         .onReceive(NotificationCenter.default.publisher(for: .openGroceryHistory)) { _ in
             showGroceryHistorySheet = true
         }

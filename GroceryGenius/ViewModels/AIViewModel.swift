@@ -36,6 +36,15 @@ final class AIViewModel: ObservableObject {
 
     private var authListener: AuthStateDidChangeListenerHandle?
     private var currentUID: String?
+    
+    // MARK: - Pro Features usage
+    
+    @Published var showUpgradePrompt: Bool = false
+    @Published var remainingFreeUses: Int = AIUsagePolicy.freeDailyLimit
+
+    private let usageStore = AIUsageStore()
+    private let proStore = ProEntitlementStore.shared
+
 
     // MARK: - Init / Deinit
 
@@ -234,6 +243,14 @@ final class AIViewModel: ObservableObject {
     // MARK: - Messaging
 
     func sendMessage(_ text: String, groceries: [GroceryItem] = []) {
+        
+        // 🚧 Future AI usage gate (inactive for now)
+        if !canSendAIMessage {
+            showUpgradePrompt = true
+            return
+        }
+
+        
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let uid = currentUID,
@@ -344,12 +361,14 @@ final class AIViewModel: ObservableObject {
     // MARK: - OpenAI Streaming (save final AI msg + update lastMessage + auto-rename)
 
     private func streamFromOpenAI(prompt: String, groceries: [GroceryItem]) async {
+        
         guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String,
               !apiKey.isEmpty else {
             print("❌ Missing OPENAI_API_KEY in Info.plist")
             isStreaming = false
             return
         }
+
 
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
 
@@ -446,7 +465,30 @@ final class AIViewModel: ObservableObject {
         isStreaming = true
 
         do {
-            let (bytes, _) = try await URLSession.shared.bytes(for: request)
+            let (bytes, response) = try await URLSession.shared.bytes(for: request)
+
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                // Read a little bit from the stream so we can show a useful error
+                var errorText = ""
+                for try await line in bytes.lines {
+                    if line.hasPrefix("data: ") {
+                        let payload = String(line.dropFirst(6))
+                        if payload == "[DONE]" { break }
+                        errorText += payload
+                        if errorText.count > 2000 { break } // safety
+                    }
+                }
+
+                let msg = errorText.isEmpty
+                  ? "AI request failed (HTTP \(http.statusCode)). Please try again."
+                  : "AI request failed (HTTP \(http.statusCode)).\n\(errorText)"
+
+                // IMPORTANT: show something instead of silent failure
+                messages.append(AIMsg(text: msg, isUser: false))
+                streamingText = ""
+                isStreaming = false
+                return
+            }
 
             for try await line in bytes.lines {
                 if Task.isCancelled { break }
@@ -455,6 +497,13 @@ final class AIViewModel: ObservableObject {
                 let payload = String(line.dropFirst(6))
                 if payload == "[DONE]" { break }
                 guard let data = payload.data(using: .utf8) else { continue }
+                
+                // ✅ If OpenAI sends an error JSON, don't silently ignore it
+                if payload.contains("\"error\"") {
+                    messages.append(AIMsg(text: "⚠️ AI error: \(payload)", isUser: false))
+                    break
+                }
+
 
                 if let chunk = try? JSONDecoder().decode(ChatStreamChunk.self, from: data),
                    let delta = chunk.choices.first?.delta.content,
@@ -505,12 +554,20 @@ final class AIViewModel: ObservableObject {
         } catch {
             if !Task.isCancelled {
                 print("❌ Streaming error:", error.localizedDescription)
+                messages.append(AIMsg(text: "⚠️ Streaming error: \(error.localizedDescription)", isUser: false))
             }
         }
 
         streamingText = ""
         isStreaming = false
     }
+    
+    // MARK: - Future AI limit gate
+
+    var canSendAIMessage: Bool {
+        true   // will be enforced later
+    }
+
 }
 
 

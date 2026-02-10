@@ -14,127 +14,135 @@ struct RecipeDetailView: View {
     @State private var showEditor = false
     @State private var showDeleteConfirm = false
 
+    // 🔹 Height of your floating bottom menu
+    private let bottomBarHeight: CGFloat = 90
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        ZStack {
+            // ✅ App theme background
+            AppColor.background
+                .ignoresSafeArea()
 
-                // MARK: - Header
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(recipe.title)
-                        .font(AppFont.title(22))
-                        .foregroundStyle(AppColor.textPrimary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
 
-                    if !recipe.notes.isEmpty {
-                        Text(recipe.notes)
-                            .font(AppFont.body(15))
-                            .foregroundStyle(AppColor.textSecondary)
-                    }
+                    // MARK: - Header
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(recipe.title)
+                            .font(AppFont.title(22))
+                            .foregroundStyle(AppColor.textPrimary)
 
-                    // ✅ Last updated
-                    Text("Last updated \(recipe.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                        if !recipe.notes.isEmpty {
+                            Text(recipe.notes)
+                                .font(AppFont.body(15))
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
+
+                        Text(
+                            "Last updated \(recipe.updatedAt.formatted(date: .abbreviated, time: .shortened))"
+                        )
                         .font(AppFont.caption(12))
                         .foregroundStyle(AppColor.textSecondary)
                         .padding(.top, 2)
-                }
+                    }
 
-                // MARK: - Tags
-                if !recipe.tags.isEmpty {
-                    HStack(spacing: 8) {
-                        ForEach(recipe.tags) { tag in
-                            Label(tag.title, systemImage: tag.systemImage)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(AppColor.primary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule().fill(AppColor.chromeSurface)
-                                )
+                    // MARK: - Tags
+                    if !recipe.tags.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(recipe.tags) { tag in
+                                Label(tag.title, systemImage: tag.systemImage)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(AppColor.primary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(AppColor.chromeSurface)
+                                    )
+                            }
                         }
                     }
-                }
 
-                Divider()
+                    Divider()
 
-                // MARK: - Ingredients
-                VStack(alignment: .leading, spacing: 12) {
+                    // MARK: - Ingredients
+                    VStack(alignment: .leading, spacing: 12) {
 
-                    HStack {
-                        Text("Ingredients")
-                            .font(AppFont.subtitle(16))
-                            .foregroundStyle(AppColor.textPrimary)
+                        HStack {
+                            Text("Ingredients")
+                                .font(AppFont.subtitle(16))
+                                .foregroundStyle(AppColor.textPrimary)
 
-                        Spacer()
+                            Spacer()
 
-                        Text("\(ingredients.count)")
-                            .font(AppFont.caption(12))
-                            .foregroundStyle(AppColor.textSecondary)
-                    }
+                            Text("\(ingredients.count)")
+                                .font(AppFont.caption(12))
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
 
-                    if isLoading {
-                        ProgressView()
-                            .padding(.vertical, 12)
+                        if isLoading {
+                            ProgressView()
+                                .padding(.vertical, 16)
 
-                    } else if ingredients.isEmpty {
-                        Text("No ingredients yet.")
-                            .font(AppFont.body(14))
-                            .foregroundStyle(AppColor.textSecondary)
+                        } else if ingredients.isEmpty {
+                            Text("No ingredients yet.")
+                                .font(AppFont.body(14))
+                                .foregroundStyle(AppColor.textSecondary)
 
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(ingredients) { ing in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(ing.name)
-                                            .font(AppFont.body(15))
-                                            .foregroundStyle(AppColor.textPrimary)
+                        } else {
+                            VStack(spacing: 8) {
+                                ForEach(ingredients) { ing in
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(ing.name)
+                                                .font(AppFont.body(15))
+                                                .foregroundStyle(AppColor.textPrimary)
 
-                                        if !ing.quantity.isEmpty {
-                                            Text(ing.quantity)
-                                                .font(AppFont.caption(13))
-                                                .foregroundStyle(AppColor.textSecondary)
+                                            if !ing.quantity.isEmpty {
+                                                Text(ing.quantity)
+                                                    .font(AppFont.caption(13))
+                                                    .foregroundStyle(AppColor.textSecondary)
+                                            }
                                         }
-                                    }
 
-                                    Spacer()
-                                }
-                                .padding(.vertical, 8)
-                                .contentShape(Rectangle())
-                                // ✅ Swipe to edit
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button {
-                                        showEditor = true
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Spacer()
                                     }
-                                    .tint(AppColor.primary)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button {
+                                            showEditor = true
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        .tint(AppColor.primary)
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                .padding(16)
+
+                // ✅ CRITICAL FIX — space for floating menu
+                .padding(.bottom, bottomBarHeight)
             }
-            .padding(16)
+            .refreshable {
+                await reloadIngredients()
+            }
         }
-
-        // ✅ Pull to refresh
-        .refreshable {
-            await reloadIngredients()
-        }
-
         .navigationTitle("Recipe")
         .navigationBarTitleDisplayMode(.inline)
 
         // MARK: - Toolbar
         .toolbar {
 
-            // Edit
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Edit") {
                     showEditor = true
                 }
             }
 
-            // Delete
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
                     showDeleteConfirm = true
@@ -150,7 +158,7 @@ struct RecipeDetailView: View {
                 .environmentObject(vm)
         }
 
-        // MARK: - Delete confirmation
+        // MARK: - Delete Alert
         .alert("Delete Recipe?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task {
@@ -168,7 +176,7 @@ struct RecipeDetailView: View {
         }
     }
 
-    // MARK: - Load ingredients
+    // MARK: - Data
     private func loadIngredients() {
         isLoading = true
         Task {
