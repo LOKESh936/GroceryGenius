@@ -6,5 +6,7 @@
 	<string>We use the microphone so you can speak your meal-plan requests.</string>
 	<key>OPENAI_API_KEY</key>
 	<string>$(OPENAI_API_KEY)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

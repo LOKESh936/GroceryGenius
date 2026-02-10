@@ -14,13 +14,14 @@
 		E6A9DB982EE5339100EE6592 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB972EE5339100EE6592 /* FirebaseCore */; };
 		E6A9DB9A2EE5339100EE6592 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB992EE5339100EE6592 /* FirebaseDatabase */; };
 		E6A9DB9C2EE5339100EE6592 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB9B2EE5339100EE6592 /* FirebaseFirestore */; };
+		E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		E663FC692ED7FDBB006BB68F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryGenius.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,8 +71,8 @@
 		E6CBE1A62ED03CCC00F2B4E6 = {
 			isa = PBXGroup;
 			children = (
+				E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */,
 				E663FC692ED7FDBB006BB68F /* README.md */,
-				E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */,
 				E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */,
 				E6CBE1B12ED03CCC00F2B4E6 /* GroceryGenius */,
 				E6326D952F2EA880005B1359 /* Frameworks */,
@@ -160,6 +161,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6A9DB932EE5327000EE6592 /* GoogleService-Info.plist in Resources */,
+				E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */,
 				E663FC6A2ED7FDBB006BB68F /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -179,7 +181,6 @@
 /* Begin XCBuildConfiguration section */
 		E6CBE1B82ED03CCD00F2B4E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -245,7 +246,6 @@
 		};
 		E6CBE1B92ED03CCD00F2B4E6 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -304,7 +304,6 @@
 		};
 		E6CBE1BB2ED03CCD00F2B4E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -315,6 +314,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryGenius/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -337,7 +337,6 @@
 		};
 		E6CBE1BC2ED03CCD00F2B4E6 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E66D79FF2ED2DB9500FC4C39 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -348,6 +347,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GroceryGenius/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We use speech recognition to turn your voice into meal-plan requests.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
