@@ -15,6 +15,7 @@
 		E6A9DB9A2EE5339100EE6592 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB992EE5339100EE6592 /* FirebaseDatabase */; };
 		E6A9DB9C2EE5339100EE6592 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB9B2EE5339100EE6592 /* FirebaseFirestore */; };
 		E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */; };
+		E6F1A6A92F3BECEF00A5A063 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +23,7 @@
 		E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryGenius.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -71,6 +73,7 @@
 		E6CBE1A62ED03CCC00F2B4E6 = {
 			isa = PBXGroup;
 			children = (
+				E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */,
 				E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */,
 				E663FC692ED7FDBB006BB68F /* README.md */,
 				E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */,
@@ -163,6 +166,7 @@
 				E6A9DB932EE5327000EE6592 /* GoogleService-Info.plist in Resources */,
 				E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */,
 				E663FC6A2ED7FDBB006BB68F /* README.md in Resources */,
+				E6F1A6A92F3BECEF00A5A063 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,7 +240,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -295,6 +299,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
