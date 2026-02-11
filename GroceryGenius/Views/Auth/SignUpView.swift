@@ -29,11 +29,11 @@ struct SignUpView: View {
 
                     // MARK: - Header
                     VStack(spacing: 16) {
-                        Image("AppIcon")
-                            .resizable()
-                            .scaledToFit()
+                        
+                        Image(systemName: "cart.fill")
+                            .font(.system(size: 38, weight: .semibold))
+                            .foregroundStyle(AppColor.primary)
                             .frame(width: 80, height: 80)
-                            .padding()
                             .background(
                                 Circle()
                                     .fill(AppColor.primary.opacity(0.15))
@@ -171,41 +171,83 @@ struct SignUpView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 20)
+            }
+            
+            if showPasswordRules {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showPasswordRules = false
+                    }
+
+                PasswordRulesPopup {
+                    showPasswordRules = false
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+
         }
-        .sheet(isPresented: $showPasswordRules) {
-            PasswordRulesSheet()
-                .presentationDetents([.medium])
+        .onTapGesture {
+            focusedField = nil
         }
+        
         .navigationBarBackButtonHidden(true)
     }
 }
 
 // MARK: - Password Rules Sheet
-private struct PasswordRulesSheet: View {
+private struct PasswordRulesPopup: View {
+
+    let onClose: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(spacing: 16) {
 
             Text("Password Requirements")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(AppColor.textPrimary)
 
-            rule("At least 8 characters")
-            rule("At least 1 uppercase letter (A–Z)")
-            rule("At least 1 lowercase letter (a–z)")
-            rule("At least 1 number or symbol")
+            VStack(alignment: .leading, spacing: 14) {
+                rule("At least 8 characters")
+                rule("At least 1 uppercase letter (A–Z)")
+                rule("At least 1 lowercase letter (a–z)")
+                rule("At least 1 number or symbol")
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(AppColor.cardElevated)
+            )
 
-            Spacer()
+            Button("Got it") {
+                onClose()
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 10)
+            .background(AppColor.primary)
+            .cornerRadius(12)
         }
         .padding(20)
-        .background(AppColor.background)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(AppColor.background)
+        )
+        .shadow(radius: 20)
+        .padding(.horizontal, 32)
     }
 
     private func rule(_ text: String) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
+                .foregroundStyle(AppColor.primary)
+
             Text(text)
+                .foregroundStyle(AppColor.textPrimary)
         }
-        .foregroundStyle(.primary)
+        .font(.system(size: 15))
     }
 }

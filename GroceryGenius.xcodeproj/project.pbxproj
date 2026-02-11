@@ -9,21 +9,19 @@
 /* Begin PBXBuildFile section */
 		E6326D972F2EA880005B1359 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = E6326D962F2EA880005B1359 /* FirebaseStorage */; };
 		E663FC6A2ED7FDBB006BB68F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E663FC692ED7FDBB006BB68F /* README.md */; };
-		E6A9DB932EE5327000EE6592 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */; };
 		E6A9DB962EE5339100EE6592 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB952EE5339100EE6592 /* FirebaseAuth */; };
 		E6A9DB982EE5339100EE6592 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB972EE5339100EE6592 /* FirebaseCore */; };
 		E6A9DB9A2EE5339100EE6592 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB992EE5339100EE6592 /* FirebaseDatabase */; };
 		E6A9DB9C2EE5339100EE6592 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB9B2EE5339100EE6592 /* FirebaseFirestore */; };
 		E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */; };
-		E6F1A6A92F3BECEF00A5A063 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */; };
+		E6F1A6AB2F3BFFE400A5A063 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6AA2F3BFFE400A5A063 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		E663FC692ED7FDBB006BB68F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E6CBE1AF2ED03CCC00F2B4E6 /* GroceryGenius.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryGenius.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
-		E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		E6F1A6AA2F3BFFE400A5A063 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -73,10 +71,9 @@
 		E6CBE1A62ED03CCC00F2B4E6 = {
 			isa = PBXGroup;
 			children = (
-				E6F1A6A82F3BECEF00A5A063 /* GoogleService-Info.plist */,
+				E6F1A6AA2F3BFFE400A5A063 /* GoogleService-Info.plist */,
 				E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */,
 				E663FC692ED7FDBB006BB68F /* README.md */,
-				E6A9DB922EE5327000EE6592 /* GoogleService-Info.plist */,
 				E6CBE1B12ED03CCC00F2B4E6 /* GroceryGenius */,
 				E6326D952F2EA880005B1359 /* Frameworks */,
 				E6CBE1B02ED03CCC00F2B4E6 /* Products */,
@@ -163,10 +160,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E6A9DB932EE5327000EE6592 /* GoogleService-Info.plist in Resources */,
 				E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */,
 				E663FC6A2ED7FDBB006BB68F /* README.md in Resources */,
-				E6F1A6A92F3BECEF00A5A063 /* GoogleService-Info.plist in Resources */,
+				E6F1A6AB2F3BFFE400A5A063 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -185,6 +181,7 @@
 /* Begin XCBuildConfiguration section */
 		E6CBE1B82ED03CCD00F2B4E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -250,6 +247,7 @@
 		};
 		E6CBE1B92ED03CCD00F2B4E6 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -309,6 +307,7 @@
 		};
 		E6CBE1BB2ED03CCD00F2B4E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -342,6 +341,7 @@
 		};
 		E6CBE1BC2ED03CCD00F2B4E6 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

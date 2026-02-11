@@ -28,11 +28,11 @@ struct AuthView: View {
 
                         // MARK: - Logo
                         VStack(spacing: 16) {
-                            Image("AppIcon")
-                                .resizable()
-                                .scaledToFit()
+                            
+                            Image(systemName: "cart.fill")
+                                .font(.system(size: 42, weight: .semibold))
+                                .foregroundStyle(AppColor.primary)
                                 .frame(width: 90, height: 90)
-                                .padding()
                                 .background(
                                     Circle()
                                         .fill(AppColor.primary.opacity(0.15))
@@ -170,6 +170,9 @@ struct AuthView: View {
                     }
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 20)
+                }
                 .onReceive(
                     NotificationCenter.default.publisher(for: .prefillAuthEmail)
                 ) { notification in
@@ -178,6 +181,9 @@ struct AuthView: View {
                         focusedField = .password
                     }
                 }
+            }
+            .onTapGesture {
+                focusedField = nil
             }
             .navigationDestination(isPresented: $showSignUp) {
                 SignUpView()

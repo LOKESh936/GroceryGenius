@@ -308,7 +308,7 @@ struct SettingsView: View {
     }
 
     private func contactSupport() {
-        let email = "support@grocerygenius.app"
+        let email = "grocerygenius.help@gmail.com"
         let subject = "GroceryGenius Support"
         let body = "Hi GroceryGenius Team,\n\nI need help with..."
 
