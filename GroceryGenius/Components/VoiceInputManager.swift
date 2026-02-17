@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import Speech
+import AVFAudio
 
 @MainActor
 class VoiceInputManager: NSObject, ObservableObject {
@@ -22,27 +23,45 @@ class VoiceInputManager: NSObject, ObservableObject {
 
     // Start listening and call `onText` with recognized text
     func startRecording(onText: @escaping (String) -> Void) {
+
         guard !isRecording else { return }
 
         let audioSession = AVAudioSession.sharedInstance()
+
         do {
             try audioSession.setCategory(.playAndRecord,
                                          mode: .measurement,
-                                         options: .duckOthers)
+                                         options: [.duckOthers, .defaultToSpeaker])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            print("❌ Audio session error:", error.localizedDescription)
+            print("Audio session setup failed:", error.localizedDescription)
+            return
+        }
+
+        // ✅ CRASH FIX FOR iPAD
+        guard audioEngine.inputNode.inputFormat(forBus: 0).channelCount > 0 else {
+            print("No microphone input available")
             return
         }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { return }
+        guard let recognitionRequest else { return }
+
         recognitionRequest.shouldReportPartialResults = true
 
         let inputNode = audioEngine.inputNode
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+        inputNode.removeTap(onBus: 0) // ✅ important safety
+
+        inputNode.installTap(onBus: 0,
+                             bufferSize: 1024,
+                             format: recordingFormat) { buffer, _ in
+            recognitionRequest.append(buffer)
+        }
 
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
-            if let result = result {
+            if let result {
                 onText(result.bestTranscription.formattedString)
             }
 
@@ -51,19 +70,14 @@ class VoiceInputManager: NSObject, ObservableObject {
             }
         }
 
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        inputNode.installTap(onBus: 0,
-                             bufferSize: 1024,
-                             format: recordingFormat) { buffer, _ in
-            recognitionRequest.append(buffer)
-        }
-
         audioEngine.prepare()
+
         do {
             try audioEngine.start()
             isRecording = true
         } catch {
-            print("❌ Could not start audio engine:", error.localizedDescription)
+            print("Audio engine failed:", error.localizedDescription)
+            stopRecording()
         }
     }
 
@@ -77,5 +91,33 @@ class VoiceInputManager: NSObject, ObservableObject {
         recognitionRequest = nil
         recognitionTask = nil
         isRecording = false
+    }
+    func speechAuthorizationStatus() -> SFSpeechRecognizerAuthorizationStatus {
+        SFSpeechRecognizer.authorizationStatus()
+    }
+    func isMicrophoneAuthorized() -> Bool {
+        AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+
+    func requestMicrophonePermissionIfNeeded() async -> Bool {
+        let session = AVAudioSession.sharedInstance()
+
+        switch session.recordPermission {
+        case .granted:
+            return true
+
+        case .denied:
+            return false
+
+        case .undetermined:
+            return await withCheckedContinuation { continuation in
+                session.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
+
+        @unknown default:
+            return false
+        }
     }
 }

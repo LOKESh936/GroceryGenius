@@ -11,6 +11,8 @@ struct AIFoodView: View {
     @State private var showChatsSheet = false
 
     @State private var userScrolledUp = false
+    @State private var showPermissionAlert = false
+
     private let bottomID = "BOTTOM_ANCHOR"
 
     var body: some View {
@@ -86,7 +88,6 @@ struct AIFoodView: View {
                 inputArea
             }
         }
-        .onAppear { Task { _ = await voice.requestAuthorization() } }
         .onReceive(NotificationCenter.default.publisher(for: .openAIChats)) { _ in
             showChatsSheet = true
         }
@@ -104,6 +105,19 @@ struct AIFoodView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Free users get 5 AI responses per day. Upgrade to Pro for unlimited access.")
+        }
+        .alert(
+            "Microphone Access Required",
+            isPresented: $showPermissionAlert
+        ) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please enable Microphone and Speech Recognition access in Settings to use voice input.")
         }
 
     }
@@ -149,7 +163,40 @@ struct AIFoodView: View {
         HStack(spacing: 10) {
 
             Button {
-                voice.isRecording ? voice.stopRecording() : voice.startRecording { inputText = $0 }
+                Task {
+
+                    // 1️⃣ Microphone permission
+                    let micGranted = await voice.requestMicrophonePermissionIfNeeded()
+                    if !micGranted {
+                        showPermissionAlert = true
+                        return
+                    }
+
+                    // 2️⃣ Speech permission
+                    let speechStatus = voice.speechAuthorizationStatus()
+
+                    if speechStatus == .denied || speechStatus == .restricted {
+                        showPermissionAlert = true
+                        return
+                    }
+
+                    if speechStatus == .notDetermined {
+                        let granted = await voice.requestAuthorization()
+                        if !granted {
+                            showPermissionAlert = true
+                            return
+                        }
+                    }
+
+                    // 3️⃣ Toggle recording
+                    if voice.isRecording {
+                        voice.stopRecording()
+                    } else {
+                        voice.startRecording { text in
+                            inputText = text
+                        }
+                    }
+                }
             } label: {
                 Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                     .font(.system(size: 26))
@@ -182,6 +229,10 @@ struct AIFoodView: View {
     private func send() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        // ✅ Stop recording automatically when sending
+        if voice.isRecording {
+            voice.stopRecording()
+        }
         hideKeyboard()
         vm.sendMessage(text, groceries: groceryViewModel.items)
         inputText = ""

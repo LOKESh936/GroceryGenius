@@ -13,7 +13,6 @@
 		E6A9DB982EE5339100EE6592 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB972EE5339100EE6592 /* FirebaseCore */; };
 		E6A9DB9A2EE5339100EE6592 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB992EE5339100EE6592 /* FirebaseDatabase */; };
 		E6A9DB9C2EE5339100EE6592 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = E6A9DB9B2EE5339100EE6592 /* FirebaseFirestore */; };
-		E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6A62F3BE6CF00A5A063 /* Secrets.xcconfig */; };
 		E6F1A6AB2F3BFFE400A5A063 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E6F1A6AA2F3BFFE400A5A063 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -126,7 +125,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1640;
-				LastUpgradeCheck = 2610;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					E6CBE1AE2ED03CCC00F2B4E6 = {
 						CreatedOnToolsVersion = 16.4;
@@ -160,7 +159,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E6F1A6A72F3BE6D400A5A063 /* Secrets.xcconfig in Resources */,
 				E663FC6A2ED7FDBB006BB68F /* README.md in Resources */,
 				E6F1A6AB2F3BFFE400A5A063 /* GoogleService-Info.plist in Resources */,
 			);
@@ -237,7 +235,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -326,6 +324,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -360,6 +359,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

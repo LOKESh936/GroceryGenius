@@ -9,7 +9,6 @@ struct GroceryGeniusApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var groceryViewModel: GroceryViewModel
     @StateObject private var aiViewModel: AIViewModel
-    @StateObject private var recipesVM = RecipesViewModel()
    
     @StateObject private var recipesViewModel: RecipesViewModel
     
@@ -44,7 +43,6 @@ struct GroceryGeniusApp: App {
                 .environmentObject(groceryViewModel)
                 .environmentObject(aiViewModel)
                 .environmentObject(recipesViewModel)
-                .environmentObject(recipesVM)
                 .tint(AppColor.accent)
         }
     }
