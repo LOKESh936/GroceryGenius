@@ -1,7 +1,7 @@
 # 🛒 GroceryGenius — Intelligent Grocery & Meal Planning iOS App
 
 GroceryGenius is a **modern, production-grade iOS application** designed to simplify grocery management and meal planning using **AI-assisted workflows**, **offline-first architecture**, and **scalable SwiftUI patterns**.
-
+Live App: https://apps.apple.com/us/app/grocerygenius-smart-groceries/id6758969627
 This project demonstrates real-world iOS engineering practices, focusing on **clean architecture**, **data consistency**, **performance**, and **maintainability**.
 
 ---
